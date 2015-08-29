@@ -8,6 +8,7 @@ python_library(
     'stack_bench.py',
     'stack_build.py',
     'stack_ghci.py',
+    'stack_haddock.py',
     'stack_install.py',
     'stack_task.py',
     'stack_test.py',

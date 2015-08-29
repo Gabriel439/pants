@@ -6,6 +6,7 @@ from pants.base.build_file_aliases                  import BuildFileAliases
 from pants.contrib.haskell.tasks.stack_bench        import StackBench
 from pants.contrib.haskell.tasks.stack_build        import StackBuild
 from pants.contrib.haskell.tasks.stack_ghci         import StackGhci
+from pants.contrib.haskell.tasks.stack_haddock      import StackHaddock
 from pants.contrib.haskell.tasks.stack_install      import StackInstall
 from pants.contrib.haskell.tasks.stack_test         import StackTest
 from pants.contrib.haskell.targets.hackage_package  import HackagePackage
@@ -26,5 +27,6 @@ def register_goals():
   TaskRegistrar(name='stack-bench'  , action=StackBench  ).install('criterion')
   TaskRegistrar(name='stack-build'  , action=StackBuild  ).install('compile')
   TaskRegistrar(name='stack-ghci'   , action=StackGhci   ).install('repl')
+  TaskRegistrar(name='stack-haddock', action=StackHaddock).install('doc')
   TaskRegistrar(name='stack-install', action=StackInstall).install('binary')
   TaskRegistrar(name='stack-test'   , action=StackTest   ).install('test')
