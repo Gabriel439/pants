@@ -4,6 +4,6 @@
 
 from pants.contrib.haskell.tasks.stack_task import StackTask
 
-class StackBuild(StackTask):
+class StackGhci(StackTask):
   def execute(self):
-    self.stack_task("build")
+    self.stack_task("ghci")

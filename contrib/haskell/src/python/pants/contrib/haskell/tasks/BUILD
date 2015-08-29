@@ -5,7 +5,10 @@
 python_library(
   name='tasks',
   sources=[
+    'stack_bench.py',
     'stack_build.py',
+    'stack_ghci.py',
+    'stack_test.py',
   ],
   dependencies=[
     'src/python/pants/backend/core/tasks:common',
