@@ -5,6 +5,7 @@ contrib_plugin(
   name='plugin',
   dependencies=[
     'contrib/haskell/src/python/pants/contrib/haskell/tasks:tasks',
+    'contrib/haskell/src/python/pants/contrib/haskell/targets:targets',
     'src/python/pants/base:build_file_aliases',
     'src/python/pants/goal:task_registrar',
   ],
