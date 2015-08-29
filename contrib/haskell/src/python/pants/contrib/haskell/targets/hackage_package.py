@@ -4,5 +4,7 @@
 
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 
-class StackagePackage(HaskellPackage):
-  pass
+class HackagePackage(HaskellPackage):
+  def __init__(self, version, **kwargs):
+    self.version = version
+    super(HackagePackage, self).__init__(**kwargs)
