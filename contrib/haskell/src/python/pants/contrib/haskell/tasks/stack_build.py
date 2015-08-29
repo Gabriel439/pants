@@ -12,7 +12,7 @@ from pants.contrib.haskell.targets.hackage_package import HackagePackage
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 from pants.util.contextutil                        import temporary_file
 
-class StackInstall(Task):
+class StackBuild(Task):
   def execute(self):
     def is_hackage_package(target):
       return isinstance(target, HackagePackage)

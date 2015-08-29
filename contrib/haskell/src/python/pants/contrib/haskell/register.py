@@ -3,7 +3,7 @@
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
 from pants.base.build_file_aliases                  import BuildFileAliases
-from pants.contrib.haskell.tasks.stack_install      import StackInstall
+from pants.contrib.haskell.tasks.stack_build        import StackBuild
 from pants.contrib.haskell.targets.hackage_package  import HackagePackage
 from pants.contrib.haskell.targets.local_package    import LocalPackage
 from pants.contrib.haskell.targets.stackage_package import StackagePackage
@@ -19,4 +19,4 @@ def build_file_aliases():
   )
 
 def register_goals():
-  TaskRegistrar(name='stack-build', action=StackInstall).install('compile')
+  TaskRegistrar(name='stack-build', action=StackBuild).install('compile')

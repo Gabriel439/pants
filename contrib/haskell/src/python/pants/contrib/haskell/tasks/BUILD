@@ -5,7 +5,7 @@
 python_library(
   name='tasks',
   sources=[
-    'stack_install.py',
+    'stack_build.py',
   ],
   dependencies=[
     'src/python/pants/backend/core/tasks:common',
