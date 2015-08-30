@@ -16,3 +16,13 @@ hackage_package(
     resolver='lts-3.1',
     version='0.2',
 )
+
+hackage_package(
+    name='discrimination',
+    package='discrimination',
+    resolver='lts-3.1',
+    version='0.1',
+    dependencies=[
+      ':promises'
+    ]
+)
