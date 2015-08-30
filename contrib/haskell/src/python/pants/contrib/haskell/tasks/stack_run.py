@@ -14,6 +14,6 @@ class StackRun(StackTask):
     register('--executable', help='Name of the executable to run.')
 
   def execute(self):
-    with self.stack_task("install") as dir:
+    for dir in self.stack_task("install"):
       executable = os.path.join(dir, "bin", self.get_options().executable)
       subprocess.check_call(executable)

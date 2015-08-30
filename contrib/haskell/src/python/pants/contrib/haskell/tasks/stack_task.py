@@ -5,7 +5,6 @@
 import os
 import subprocess
 
-from contextlib                                    import contextmanager
 from pants.backend.core.tasks.task                 import Task
 from pants.base.build_environment                  import get_buildroot
 from pants.contrib.haskell.targets.local_package   import LocalPackage
@@ -51,7 +50,6 @@ class StackTask(Task):
 
     return yaml
 
-  @contextmanager
   def stack_task(self, command):
     for target in self.context.target_roots:
       if isinstance(target, HaskellPackage):

@@ -6,5 +6,5 @@ from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackHaddock(StackTask):
   def execute(self):
-    with self.stack_task("haddock"):
+    for dir in self.stack_task("haddock"):
       pass

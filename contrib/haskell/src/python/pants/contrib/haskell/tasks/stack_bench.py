@@ -6,5 +6,5 @@ from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackBench(StackTask):
   def execute(self):
-    with self.stack_task("bench"):
+    for dir in self.stack_task("bench"):
       pass
