@@ -6,4 +6,5 @@ from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackBuild(StackTask):
   def execute(self):
-    self.stack_task("build")
+    with self.stack_task("build"):
+      pass

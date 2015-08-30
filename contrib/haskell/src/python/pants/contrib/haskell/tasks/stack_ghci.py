@@ -6,4 +6,5 @@ from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackGhci(StackTask):
   def execute(self):
-    self.stack_task("ghci")
+    with self.stack_task("ghci"):
+      pass

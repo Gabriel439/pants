@@ -8,6 +8,7 @@ from pants.contrib.haskell.tasks.stack_build        import StackBuild
 from pants.contrib.haskell.tasks.stack_ghci         import StackGhci
 from pants.contrib.haskell.tasks.stack_haddock      import StackHaddock
 from pants.contrib.haskell.tasks.stack_install      import StackInstall
+from pants.contrib.haskell.tasks.stack_run          import StackRun
 from pants.contrib.haskell.tasks.stack_test         import StackTest
 from pants.contrib.haskell.targets.hackage_package  import HackagePackage
 from pants.contrib.haskell.targets.local_package    import LocalPackage
@@ -29,4 +30,5 @@ def register_goals():
   TaskRegistrar(name='stack-ghci'   , action=StackGhci   ).install('repl')
   TaskRegistrar(name='stack-haddock', action=StackHaddock).install('doc')
   TaskRegistrar(name='stack-install', action=StackInstall).install('binary')
+  TaskRegistrar(name='stack-run'    , action=StackRun    ).install('run')
   TaskRegistrar(name='stack-test'   , action=StackTest   ).install('test')

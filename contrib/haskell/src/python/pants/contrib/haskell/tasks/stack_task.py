@@ -5,12 +5,14 @@
 import os
 import subprocess
 
+from contextlib                                    import contextmanager
 from pants.backend.core.tasks.task                 import Task
 from pants.base.build_environment                  import get_buildroot
 from pants.contrib.haskell.targets.local_package   import LocalPackage
 from pants.contrib.haskell.targets.hackage_package import HackagePackage
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
-from pants.util.contextutil                        import temporary_file
+from pants.util.contextutil                        import temporary_dir
+from pants.util.dirutil                            import safe_mkdir
 
 class StackTask(Task):
   @staticmethod
@@ -49,18 +51,23 @@ class StackTask(Task):
 
     return yaml
 
+  @contextmanager
   def stack_task(self, command):
     for target in self.context.target_roots:
       if isinstance(target, HaskellPackage):
         yaml = StackTask.make_stack_yaml(target)
 
-        with temporary_file(suffix=".yaml") as handle:
-          handle.write(yaml)
-          handle.close()
-          stack_yaml_path = handle.name
+        with temporary_dir() as dir:
+          stack_yaml_path = os.path.join(dir, "stack.yaml")
+          with open(stack_yaml_path, 'w') as handle:
+            handle.write(yaml)
+
+          bin_path = os.path.join(dir, "bin")
+          safe_mkdir(bin_path)
 
           try:
-            subprocess.check_call(["stack", "--install-ghc", "--stack-yaml=" + stack_yaml_path, command, target.package])
+            subprocess.check_call(["stack", "--verbosity", "error", "--local-bin-path", bin_path, "--install-ghc", "--stack-yaml=" + stack_yaml_path, command, target.package])
+            yield dir
           except:
             print("")
             print("Contents of " + stack_yaml_path + ":")

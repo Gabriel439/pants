@@ -6,4 +6,5 @@ from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackInstall(StackTask):
   def execute(self):
-    self.stack_task("install")
+    with self.stack_task("install"):
+      pass
