@@ -59,12 +59,8 @@ class StackTask(Task):
           handle.close()
           stack_yaml_path = handle.name
 
-          # Silence the "Would add the following to PATH: ..." message
-          with open(os.devnull, 'w') as devnull:
-            subprocess.check_call(["stack", "--stack-yaml=" + stack_yaml_path, "setup"], stdout=devnull)
-
           try:
-            subprocess.check_call(["stack", "--stack-yaml=" + stack_yaml_path, command, target.package])
+            subprocess.check_call(["stack", "--install-ghc", "--stack-yaml=" + stack_yaml_path, command, target.package])
           except:
             print("")
             print("Contents of " + stack_yaml_path + ":")
