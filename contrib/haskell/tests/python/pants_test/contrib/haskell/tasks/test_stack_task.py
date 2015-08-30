@@ -2,22 +2,32 @@
 # Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-from pants.base.address                            import SyntheticAddress
-from pants.contrib.haskell.targets.hackage_package import HackagePackage
-from pants.contrib.haskell.tasks.stack_build       import StackBuild
-from pants_test.tasks.task_test_base               import TaskTestBase
+from pants.contrib.haskell.targets.hackage_package  import HackagePackage
+from pants.contrib.haskell.targets.stackage_package import StackagePackage
+from pants.contrib.haskell.tasks.stack_task         import StackTask
+from pants_test.base_test                           import BaseTest
 
-class StackTaskTest(TaskTestBase):
+class StackTaskTest(BaseTest):
 
-  address = SyntheticAddress.parse
+  def test_make_stack_yaml_for_stackage_package(self):
+    pipes = self.make_target(
+      spec        = '3rdparty:pipes',
+      target_type = StackagePackage,
+      package     = 'pipes',
+      resolver    = 'lts-3.1',
+    )
 
-  @classmethod
-  def task_type(cls):
-    return StackBuild
+    expected_yaml = (
+      "flags: {}\n"
+      "packages: []\n"
+      "extra-deps: []\n"
+      "resolver: lts-3.1\n"
+    )
+    actual_yaml = StackTask.make_stack_yaml(pipes)
 
-  def test_make_stack_yaml(self):
-    stack_build = self.create_task(self.context())
+    self.assertEqual(expected_yaml, actual_yaml)
 
+  def test_make_stack_yaml_for_hackage_package(self):
     promises = self.make_target(
       spec        = '3rdparty:promises',
       target_type = HackagePackage,
@@ -43,6 +53,6 @@ class StackTaskTest(TaskTestBase):
       "- promises-0.2\n"
       "resolver: lts-3.1\n"
     )
-    actual_yaml = stack_build.make_stack_yaml(discrimination)
+    actual_yaml = StackTask.make_stack_yaml(discrimination)
 
     self.assertEqual(expected_yaml, actual_yaml)
