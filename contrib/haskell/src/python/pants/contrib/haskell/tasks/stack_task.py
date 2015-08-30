@@ -13,37 +13,46 @@ from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 from pants.util.contextutil                        import temporary_file
 
 class StackTask(Task):
+  @staticmethod
+  def is_hackage_package(target):
+    return isinstance(target, HackagePackage)
+
+  @staticmethod
+  def is_local_package(target):
+    return isinstance(target, LocalPackage)
+
+  @staticmethod
+  def make_stack_yaml(target):
+    packages = [target] + target.dependencies
+
+    hackage_packages = filter(StackTask.is_hackage_package, packages)
+    local_packages   = filter(StackTask.is_local_package  , packages)
+
+    yaml = "flags: {}\n"
+
+    if local_packages:
+      yaml += "packages:\n"
+      for pkg in local_packages:
+        path = os.path.join(get_buildroot(), pkg.target_base)
+        yaml += "- " + path + "\n"
+    else:
+      yaml += "packages: []\n"
+
+    if hackage_packages:
+      yaml += "extra-deps:\n"
+      for pkg in hackage_packages:
+        yaml += "- " + pkg.package + "-" + pkg.version + "\n"
+    else:
+      yaml += "extra-deps: []\n"
+
+    yaml += "resolver: " + target.resolver + "\n"
+
+    return yaml
+
   def stack_task(self, command):
-    def is_hackage_package(target):
-      return isinstance(target, HackagePackage)
-
-    def is_local_package(target):
-      return isinstance(target, LocalPackage)
-
     for target in self.context.target_roots:
       if isinstance(target, HaskellPackage):
-        packages = [target] + target.dependencies
-        hackage_packages = filter(is_hackage_package, packages)
-        local_packages   = filter(is_local_package  , packages)
-
-        yaml = "flags: {}\n"
-
-        if local_packages:
-          yaml += "packages:\n"
-          for pkg in local_packages:
-            path = os.path.join(get_buildroot(), pkg.target_base)
-            yaml += "- " + path + "\n"
-        else:
-          yaml += "packages: []\n"
-
-        if hackage_packages:
-          yaml += "extra-deps:\n"
-          for pkg in hackage_packages:
-            yaml += "- " + pkg.package + "-" + pkg.version + "\n"
-        else:
-          yaml += "extra-deps: []\n"
-
-        yaml += "resolver: " + target.resolver
+        yaml = StackTask.make_stack_yaml(target)
 
         with temporary_file(suffix=".yaml") as handle:
           handle.write(yaml)

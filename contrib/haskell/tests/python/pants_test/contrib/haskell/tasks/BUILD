@@ -1,0 +1,19 @@
+target(
+  name='all',
+  dependencies=[
+    ':test_stack_task',
+  ]
+)
+
+python_tests(
+  name='test_stack_task',
+  sources=[
+    'test_stack_task.py',
+  ],
+  dependencies=[
+    'contrib/haskell/src/python/pants/contrib/haskell/tasks',
+    'contrib/haskell/src/python/pants/contrib/haskell/targets:hackage_package',
+    'src/python/pants/base:address',
+    'tests/python/pants_test/tasks:task_test_base',
+  ],
+)
