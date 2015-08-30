@@ -49,7 +49,11 @@ class StackTask(Task):
           handle.write(yaml)
           handle.close()
           stack_yaml_path = handle.name
-          print("")
+
+          # Silence the "Would add the following to PATH: ..." message
+          with open(os.devnull, 'w') as devnull:
+            subprocess.check_call(["stack", "--stack-yaml=" + stack_yaml_path, "setup"], stdout=devnull)
+
           try:
             subprocess.check_call(["stack", "--stack-yaml=" + stack_yaml_path, command, target.package])
           except:
@@ -57,6 +61,6 @@ class StackTask(Task):
             print("Contents of " + stack_yaml_path + ":")
             print("")
             print("```")
-            print yaml
+            print(yaml)
             print("```")
             raise
