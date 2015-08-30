@@ -25,7 +25,7 @@ class StackTask(Task):
         packages = [target] + target.dependencies
         hackage_packages = filter(is_hackage_package, packages)
         local_packages   = filter(is_local_package  , packages)
-        
+
         yaml = "flags: {}\n"
 
         if local_packages:
