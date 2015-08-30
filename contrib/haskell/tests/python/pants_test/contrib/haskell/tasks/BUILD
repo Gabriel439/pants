@@ -13,6 +13,7 @@ python_tests(
   dependencies=[
     'contrib/haskell/src/python/pants/contrib/haskell/tasks',
     'contrib/haskell/src/python/pants/contrib/haskell/targets:hackage_package',
+    'contrib/haskell/src/python/pants/contrib/haskell/targets:local_package',
     'contrib/haskell/src/python/pants/contrib/haskell/targets:stackage_package',
     'src/python/pants/base:address',
     'tests/python/pants_test/tasks:task_test_base',
