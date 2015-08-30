@@ -75,6 +75,10 @@ class StackTaskTest(BaseTest):
     ]
     # We never use the contents of the local source tree directly.  We only pass the
     # path to the source tree to the `stack` tool, which does the rest
+    #
+    # We match against a regex because the auto-generated path will be something like:
+    #
+    #     "- /private/var/vp0hm......4lcCsM_BUILD_ROOT/src/haskell/new-template"
     expected_path_regex = "- .*?/src/haskell/new-template"
     expected_yaml_footer = [
       "extra-deps: []",

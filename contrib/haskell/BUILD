@@ -2,4 +2,4 @@
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
 source_root('src/python', python_library)
-# source_root('tests/python', python_library, python_tests)
+source_root('tests/python', python_library, python_tests)

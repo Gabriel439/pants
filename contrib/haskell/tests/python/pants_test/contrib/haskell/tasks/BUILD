@@ -1,8 +1,26 @@
 target(
   name='all',
   dependencies=[
+    ':unit',
+    ':integration',
+  ]
+)
+
+target(
+  name='unit',
+  dependencies=[
     ':test_stack_task',
   ]
+)
+
+target(
+  name='integration',
+  dependencies=[
+    ':test_stack_build_integration',
+    ':test_stack_ghci_integration',
+    ':test_stack_haddock_integration',
+    ':test_stack_test_integration',
+  ],
 )
 
 python_tests(
@@ -17,5 +35,45 @@ python_tests(
     'contrib/haskell/src/python/pants/contrib/haskell/targets:stackage_package',
     'src/python/pants/base:address',
     'tests/python/pants_test/tasks:task_test_base',
+  ],
+)
+
+python_tests(
+  name='test_stack_build_integration',
+  sources=[
+    'test_stack_build_integration.py',
+  ],
+  dependencies=[
+    'tests/python/pants_test:int-test',
+  ],
+)
+
+python_tests(
+  name='test_stack_ghci_integration',
+  sources=[
+    'test_stack_ghci_integration.py',
+  ],
+  dependencies=[
+    'tests/python/pants_test:int-test',
+  ],
+)
+
+python_tests(
+  name='test_stack_haddock_integration',
+  sources=[
+    'test_stack_haddock_integration.py',
+  ],
+  dependencies=[
+    'tests/python/pants_test:int-test',
+  ],
+)
+
+python_tests(
+  name='test_stack_test_integration',
+  sources=[
+    'test_stack_test_integration.py',
+  ],
+  dependencies=[
+    'tests/python/pants_test:int-test',
   ],
 )
