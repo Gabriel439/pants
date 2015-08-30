@@ -16,8 +16,10 @@ target(
 target(
   name='integration',
   dependencies=[
+    ':test_stack_bench_integration',
     ':test_stack_build_integration',
     ':test_stack_ghci_integration',
+    ':test_stack_install_integration',
     ':test_stack_haddock_integration',
     ':test_stack_test_integration',
   ],
@@ -39,6 +41,16 @@ python_tests(
 )
 
 python_tests(
+  name='test_stack_bench_integration',
+  sources=[
+    'test_stack_bench_integration.py',
+  ],
+  dependencies=[
+    'tests/python/pants_test:int-test',
+  ],
+)
+
+python_tests(
   name='test_stack_build_integration',
   sources=[
     'test_stack_build_integration.py',
@@ -52,6 +64,16 @@ python_tests(
   name='test_stack_ghci_integration',
   sources=[
     'test_stack_ghci_integration.py',
+  ],
+  dependencies=[
+    'tests/python/pants_test:int-test',
+  ],
+)
+
+python_tests(
+  name='test_stack_install_integration',
+  sources=[
+    'test_stack_install_integration.py',
   ],
   dependencies=[
     'tests/python/pants_test:int-test',
