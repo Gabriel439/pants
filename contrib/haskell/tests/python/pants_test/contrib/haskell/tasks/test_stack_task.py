@@ -3,7 +3,7 @@
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
 from pants.contrib.haskell.targets.hackage_package  import HackagePackage
-from pants.contrib.haskell.targets.local_package    import LocalPackage
+from pants.contrib.haskell.targets.cabal_package    import CabalPackage
 from pants.contrib.haskell.targets.stackage_package import StackagePackage
 from pants.contrib.haskell.tasks.stack_task         import StackTask
 from pants_test.base_test                           import BaseTest
@@ -61,10 +61,10 @@ class StackTaskTest(BaseTest):
 
     self.assertEqual(actual_yaml, expected_yaml)
 
-  def test_make_stack_yaml_for_local_package(self):
+  def test_make_stack_yaml_for_cabal_package(self):
     newtemplate = self.make_target(
       spec        = 'src/haskell/new-template',
-      target_type = LocalPackage,
+      target_type = CabalPackage,
       package     = 'new-template',
       resolver    = 'lts-3.1',
     )
@@ -73,7 +73,7 @@ class StackTaskTest(BaseTest):
       "flags: {}",
       "packages:",
     ]
-    # We never use the contents of the local source tree directly.  We only pass the
+    # We never use the contents of the cabal source tree directly.  We only pass the
     # path to the source tree to the `stack` tool, which does the rest
     #
     # We match against a regex because the auto-generated path will be something like:

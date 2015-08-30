@@ -4,5 +4,5 @@
 
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 
-class LocalPackage(HaskellPackage):
+class CabalPackage(HaskellPackage):
   pass

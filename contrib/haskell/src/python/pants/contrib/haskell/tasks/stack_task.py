@@ -7,7 +7,7 @@ import subprocess
 
 from pants.backend.core.tasks.task                 import Task
 from pants.base.build_environment                  import get_buildroot
-from pants.contrib.haskell.targets.local_package   import LocalPackage
+from pants.contrib.haskell.targets.cabal_package   import CabalPackage
 from pants.contrib.haskell.targets.hackage_package import HackagePackage
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 from pants.util.contextutil                        import temporary_dir
@@ -19,21 +19,21 @@ class StackTask(Task):
     return isinstance(target, HackagePackage)
 
   @staticmethod
-  def is_local_package(target):
-    return isinstance(target, LocalPackage)
+  def is_cabal_package(target):
+    return isinstance(target, CabalPackage)
 
   @staticmethod
   def make_stack_yaml(target):
     packages = [target] + target.dependencies
 
     hackage_packages = filter(StackTask.is_hackage_package, packages)
-    local_packages   = filter(StackTask.is_local_package  , packages)
+    cabal_packages   = filter(StackTask.is_cabal_package  , packages)
 
     yaml = "flags: {}\n"
 
-    if local_packages:
+    if cabal_packages:
       yaml += "packages:\n"
-      for pkg in local_packages:
+      for pkg in cabal_packages:
         path = os.path.join(get_buildroot(), pkg.target_base)
         yaml += "- " + path + "\n"
     else:

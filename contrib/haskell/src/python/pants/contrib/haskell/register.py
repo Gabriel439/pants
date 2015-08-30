@@ -11,7 +11,7 @@ from pants.contrib.haskell.tasks.stack_install      import StackInstall
 from pants.contrib.haskell.tasks.stack_run          import StackRun
 from pants.contrib.haskell.tasks.stack_test         import StackTest
 from pants.contrib.haskell.targets.hackage_package  import HackagePackage
-from pants.contrib.haskell.targets.local_package    import LocalPackage
+from pants.contrib.haskell.targets.cabal_package    import CabalPackage
 from pants.contrib.haskell.targets.stackage_package import StackagePackage
 from pants.goal.task_registrar                      import TaskRegistrar
 
@@ -19,7 +19,7 @@ def build_file_aliases():
   return BuildFileAliases.create(
     targets ={
       'hackage_package' : HackagePackage,
-      'local_package'   : LocalPackage,
+      'cabal_package'   : CabalPackage,
       'stackage_package': StackagePackage,
     }
   )

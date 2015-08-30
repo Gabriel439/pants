@@ -3,7 +3,7 @@ target(
   dependencies=[
     ':stackage_package',
     ':hackage_package',
-    ':local_package',
+    ':cabal_package',
   ]
 )
 
@@ -28,9 +28,9 @@ python_library(
 )
 
 python_library(
-  name='local_package',
+  name='cabal_package',
   sources=[
-    'local_package.py',
+    'cabal_package.py',
   ],
   dependencies=[
     ':haskell_package',
