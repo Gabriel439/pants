@@ -62,7 +62,7 @@ class StackTask(Task):
 
     return yaml
 
-  def stack_task(self, command):
+  def stack_task(self, command, extra_args = []):
     for target in self.context.target_roots:
       if isinstance(target, HaskellPackage):
         yaml = StackTask.make_stack_yaml(target)
@@ -76,7 +76,7 @@ class StackTask(Task):
           safe_mkdir(bin_path)
 
           try:
-            subprocess.check_call(["stack", "--verbosity", "error", "--local-bin-path", bin_path, "--install-ghc", "--stack-yaml=" + stack_yaml_path, command, target.package])
+            subprocess.check_call(["stack", "--verbosity", "error", "--local-bin-path", bin_path, "--install-ghc", "--stack-yaml=" + stack_yaml_path, command, target.package] + extra_args)
             yield dir
           except:
             print("")
