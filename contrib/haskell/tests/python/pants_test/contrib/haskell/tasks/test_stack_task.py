@@ -61,7 +61,27 @@ class StackTaskTest(BaseTest):
 
     self.assertEqual(actual_yaml, expected_yaml)
 
-  def test_make_stack_yaml_for_cabal_package(self):
+  def test_make_stack_yaml_for_remote_cabal_package(self):
+    stack = self.make_target(
+      spec        = '3rdparty:stack',
+      target_type = CabalPackage,
+      package     = 'stack',
+      resolver    = 'lts-3.1',
+      path        = 'https://github.com/commercialhaskell/stack/archive/v0.1.3.1.tar.gz',
+    )
+
+    expected_yaml = (
+      "flags: {}\n"
+      "packages:\n"
+      "- https://github.com/commercialhaskell/stack/archive/v0.1.3.1.tar.gz\n"
+      "extra-deps: []\n"
+      "resolver: lts-3.1\n"
+    )
+    actual_yaml = StackTask.make_stack_yaml(stack)
+
+    self.assertEqual(actual_yaml, expected_yaml)
+
+  def test_make_stack_yaml_for_local_cabal_package(self):
     newtemplate = self.make_target(
       spec        = 'src/haskell/new-template',
       target_type = CabalPackage,
