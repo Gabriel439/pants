@@ -34,7 +34,7 @@ class StackTask(Task):
     if cabal_packages:
       yaml += "packages:\n"
       for pkg in cabal_packages:
-        path = os.path.join(get_buildroot(), pkg.target_base)
+        path = pkg.path or os.path.join(get_buildroot(), pkg.target_base)
         yaml += "- " + path + "\n"
     else:
       yaml += "packages: []\n"

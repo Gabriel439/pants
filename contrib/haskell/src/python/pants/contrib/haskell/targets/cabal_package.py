@@ -5,4 +5,6 @@
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 
 class CabalPackage(HaskellPackage):
-  pass
+  def __init__(self, path = None, **kwargs):
+    self.path = path
+    super(CabalPackage, self).__init__(**kwargs)
