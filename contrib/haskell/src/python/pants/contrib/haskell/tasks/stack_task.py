@@ -77,7 +77,6 @@ class StackTask(Task):
 
           try:
             subprocess.check_call(["stack", "--verbosity", "error", "--local-bin-path", bin_path, "--install-ghc", "--stack-yaml=" + stack_yaml_path, command, target.package] + extra_args)
-            yield dir
           except:
             print("")
             print("Contents of " + stack_yaml_path + ":")
@@ -86,3 +85,4 @@ class StackTask(Task):
             print(yaml)
             print("```")
             raise
+          yield dir
