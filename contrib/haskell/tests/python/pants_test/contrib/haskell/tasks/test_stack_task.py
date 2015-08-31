@@ -2,19 +2,19 @@
 # Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-from pants.base.exceptions                          import TaskError
-from pants.contrib.haskell.targets.hackage_package  import HackagePackage
-from pants.contrib.haskell.targets.cabal_package    import CabalPackage
-from pants.contrib.haskell.targets.stackage_package import StackagePackage
-from pants.contrib.haskell.tasks.stack_task         import StackTask
-from pants_test.base_test                           import BaseTest
+from pants.base.exceptions                  import TaskError
+from pants.contrib.haskell.targets.hackage  import Hackage
+from pants.contrib.haskell.targets.cabal    import Cabal
+from pants.contrib.haskell.targets.stackage import Stackage
+from pants.contrib.haskell.tasks.stack_task import StackTask
+from pants_test.base_test                   import BaseTest
 
 class StackTaskTest(BaseTest):
 
-  def test_make_stack_yaml_for_stackage_package(self):
+  def test_make_stack_yaml_for_stackage(self):
     pipes = self.make_target(
       spec        = '3rdparty:pipes',
-      target_type = StackagePackage,
+      target_type = Stackage,
       package     = 'pipes',
       resolver    = 'lts-3.1',
     )
@@ -32,10 +32,10 @@ class StackTaskTest(BaseTest):
 
     self.assertEqual(actual_yaml, expected_yaml)
 
-  def test_make_stack_yaml_for_hackage_package(self):
+  def test_make_stack_yaml_for_hackage(self):
     promises = self.make_target(
       spec        = '3rdparty:promises',
-      target_type = HackagePackage,
+      target_type = Hackage,
       package     = 'promises',
       version     = '0.2',
       resolver    = 'lts-3.1',
@@ -43,7 +43,7 @@ class StackTaskTest(BaseTest):
 
     discrimination = self.make_target(
       spec         = '3rdparty:discrimination',
-      target_type  = HackagePackage,
+      target_type  = Hackage,
       package      = 'discrimination',
       version      = '0.1',
       dependencies = [promises],
@@ -65,7 +65,7 @@ class StackTaskTest(BaseTest):
   def test_resolver_validation(self):
     promises = self.make_target(
       spec        = '3rdparty:promises',
-      target_type = HackagePackage,
+      target_type = Hackage,
       package     = 'promises',
       version     = '0.2',
       resolver    = 'lts-3.0',
@@ -73,7 +73,7 @@ class StackTaskTest(BaseTest):
 
     discrimination = self.make_target(
       spec         = '3rdparty:discrimination',
-      target_type  = HackagePackage,
+      target_type  = Hackage,
       package      = 'discrimination',
       version      = '0.1',
       dependencies = [promises],
@@ -82,10 +82,10 @@ class StackTaskTest(BaseTest):
 
     self.assertRaises(TaskError, StackTask.make_stack_yaml, discrimination)
 
-  def test_make_stack_yaml_for_remote_cabal_package(self):
+  def test_make_stack_yaml_for_remote_cabal(self):
     stack = self.make_target(
       spec        = '3rdparty:stack',
-      target_type = CabalPackage,
+      target_type = Cabal,
       package     = 'stack',
       resolver    = 'lts-3.1',
       path        = 'https://github.com/commercialhaskell/stack/archive/v0.1.3.1.tar.gz',
@@ -102,10 +102,10 @@ class StackTaskTest(BaseTest):
 
     self.assertEqual(actual_yaml, expected_yaml)
 
-  def test_make_stack_yaml_for_local_cabal_package(self):
+  def test_make_stack_yaml_for_local_cabal(self):
     newtemplate = self.make_target(
       spec        = 'src/haskell/new-template',
-      target_type = CabalPackage,
+      target_type = Cabal,
       package     = 'new-template',
       resolver    = 'lts-3.1',
     )

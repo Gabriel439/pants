@@ -1,23 +1,23 @@
-stackage_package(
+stackage(
   name='pipes',
   package='pipes',
   resolver='lts-3.1',
 )
 
-stackage_package(
+stackage(
   name='mmorph',
   package='mmorph',
   resolver='lts-3.1',
 )
 
-hackage_package(
+hackage(
   name='promises',
   package='promises',
   resolver='lts-3.1',
   version='0.2',
 )
 
-hackage_package(
+hackage(
   name='discrimination',
   package='discrimination',
   resolver='lts-3.1',
@@ -27,7 +27,7 @@ hackage_package(
   ]
 )
 
-cabal_package(
+cabal(
   name='stack',
   package='stack',
   resolver='lts-3.1',

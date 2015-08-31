@@ -1,4 +1,4 @@
-cabal_package(
+cabal(
   name     = 'new-template',
   package  = 'new-template',
   resolver = 'lts-3.1',

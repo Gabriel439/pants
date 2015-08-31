@@ -1,16 +1,16 @@
 target(
   name='targets',
   dependencies=[
-    ':stackage_package',
-    ':hackage_package',
-    ':cabal_package',
+    ':stackage',
+    ':hackage',
+    ':cabal',
   ]
 )
 
 python_library(
-  name='stackage_package',
+  name='stackage',
   sources=[
-    'stackage_package.py',
+    'stackage.py',
   ],
   dependencies=[
     ':haskell_package',
@@ -18,9 +18,9 @@ python_library(
 )
 
 python_library(
-  name='hackage_package',
+  name='hackage',
   sources=[
-    'hackage_package.py',
+    'hackage.py',
   ],
   dependencies=[
     ':haskell_package',
@@ -28,9 +28,9 @@ python_library(
 )
 
 python_library(
-  name='cabal_package',
+  name='cabal',
   sources=[
-    'cabal_package.py',
+    'cabal.py',
   ],
   dependencies=[
     ':haskell_package',

@@ -8,20 +8,20 @@ import subprocess
 from pants.backend.core.tasks.task                 import Task
 from pants.base.build_environment                  import get_buildroot
 from pants.base.exceptions                         import TaskError
-from pants.contrib.haskell.targets.cabal_package   import CabalPackage
-from pants.contrib.haskell.targets.hackage_package import HackagePackage
+from pants.contrib.haskell.targets.cabal           import Cabal
+from pants.contrib.haskell.targets.hackage         import Hackage
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 from pants.util.contextutil                        import temporary_dir
 from pants.util.dirutil                            import safe_mkdir
 
 class StackTask(Task):
   @staticmethod
-  def is_hackage_package(target):
-    return isinstance(target, HackagePackage)
+  def is_hackage(target):
+    return isinstance(target, Hackage)
 
   @staticmethod
-  def is_cabal_package(target):
-    return isinstance(target, CabalPackage)
+  def is_cabal(target):
+    return isinstance(target, Cabal)
 
   @staticmethod
   def make_stack_yaml(target):
@@ -38,8 +38,8 @@ class StackTask(Task):
 
     packages = [target] + target.dependencies
 
-    hackage_packages = filter(StackTask.is_hackage_package, packages)
-    cabal_packages   = filter(StackTask.is_cabal_package  , packages)
+    hackage_packages = filter(StackTask.is_hackage, packages)
+    cabal_packages   = filter(StackTask.is_cabal  , packages)
 
     yaml = "flags: {}\n"
 

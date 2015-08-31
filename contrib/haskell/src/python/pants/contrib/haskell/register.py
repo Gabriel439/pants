@@ -2,25 +2,25 @@
 # Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-from pants.base.build_file_aliases                  import BuildFileAliases
-from pants.contrib.haskell.tasks.stack_bench        import StackBench
-from pants.contrib.haskell.tasks.stack_build        import StackBuild
-from pants.contrib.haskell.tasks.stack_ghci         import StackGhci
-from pants.contrib.haskell.tasks.stack_haddock      import StackHaddock
-from pants.contrib.haskell.tasks.stack_install      import StackInstall
-from pants.contrib.haskell.tasks.stack_run          import StackRun
-from pants.contrib.haskell.tasks.stack_test         import StackTest
-from pants.contrib.haskell.targets.hackage_package  import HackagePackage
-from pants.contrib.haskell.targets.cabal_package    import CabalPackage
-from pants.contrib.haskell.targets.stackage_package import StackagePackage
-from pants.goal.task_registrar                      import TaskRegistrar
+from pants.base.build_file_aliases             import BuildFileAliases
+from pants.contrib.haskell.tasks.stack_bench   import StackBench
+from pants.contrib.haskell.tasks.stack_build   import StackBuild
+from pants.contrib.haskell.tasks.stack_ghci    import StackGhci
+from pants.contrib.haskell.tasks.stack_haddock import StackHaddock
+from pants.contrib.haskell.tasks.stack_install import StackInstall
+from pants.contrib.haskell.tasks.stack_run     import StackRun
+from pants.contrib.haskell.tasks.stack_test    import StackTest
+from pants.contrib.haskell.targets.hackage     import Hackage
+from pants.contrib.haskell.targets.cabal       import Cabal
+from pants.contrib.haskell.targets.stackage    import Stackage
+from pants.goal.task_registrar                 import TaskRegistrar
 
 def build_file_aliases():
   return BuildFileAliases.create(
     targets ={
-      'hackage_package' : HackagePackage,
-      'cabal_package'   : CabalPackage,
-      'stackage_package': StackagePackage,
+      'hackage' : Hackage,
+      'cabal'   : Cabal,
+      'stackage': Stackage,
     }
   )
 

@@ -4,7 +4,7 @@
 
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 
-class StackagePackage(HaskellPackage):
+class Stackage(HaskellPackage):
   """A package hosted on Stackage
 
   You never need to use this target as a dependency since the `resolver` field already

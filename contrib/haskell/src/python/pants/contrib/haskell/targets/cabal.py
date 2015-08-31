@@ -4,7 +4,7 @@
 
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
 
-class CabalPackage(HaskellPackage):
+class Cabal(HaskellPackage):
   """A local or remote `cabal` package
 
   If you provide the `path` field then this target points to the source archive
@@ -12,9 +12,9 @@ class CabalPackage(HaskellPackage):
   at the current directory.
   """
 
-  def __init__(self, remote = None, **kwargs):
+  def __init__(self, path = None, **kwargs):
     """
     :param str remote: Optional path to a remote source archive in TAR or ZIP format
     """
     self.path = path
-    super(CabalPackage, self).__init__(**kwargs)
+    super(Cabal, self).__init__(**kwargs)

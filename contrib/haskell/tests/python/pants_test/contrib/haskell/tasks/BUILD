@@ -32,9 +32,9 @@ python_tests(
   ],
   dependencies=[
     'contrib/haskell/src/python/pants/contrib/haskell/tasks',
-    'contrib/haskell/src/python/pants/contrib/haskell/targets:hackage_package',
-    'contrib/haskell/src/python/pants/contrib/haskell/targets:cabal_package',
-    'contrib/haskell/src/python/pants/contrib/haskell/targets:stackage_package',
+    'contrib/haskell/src/python/pants/contrib/haskell/targets:hackage',
+    'contrib/haskell/src/python/pants/contrib/haskell/targets:cabal',
+    'contrib/haskell/src/python/pants/contrib/haskell/targets:stackage',
     'src/python/pants/base:address',
     'tests/python/pants_test/tasks:task_test_base',
   ],

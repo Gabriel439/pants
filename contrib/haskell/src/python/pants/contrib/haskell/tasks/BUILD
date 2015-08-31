@@ -17,7 +17,7 @@ python_library(
   dependencies=[
     'src/python/pants/backend/core/tasks:common',
     'contrib/haskell/src/python/pants/contrib/haskell/targets:haskell_package',
-    'contrib/haskell/src/python/pants/contrib/haskell/targets:hackage_package',
-    'contrib/haskell/src/python/pants/contrib/haskell/targets:cabal_package',
+    'contrib/haskell/src/python/pants/contrib/haskell/targets:hackage',
+    'contrib/haskell/src/python/pants/contrib/haskell/targets:cabal',
   ],
 )
