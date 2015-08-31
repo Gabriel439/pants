@@ -2,6 +2,7 @@
 # Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
+from pants.base.exceptions                          import TaskError
 from pants.contrib.haskell.targets.hackage_package  import HackagePackage
 from pants.contrib.haskell.targets.cabal_package    import CabalPackage
 from pants.contrib.haskell.targets.stackage_package import StackagePackage
@@ -60,6 +61,26 @@ class StackTaskTest(BaseTest):
     actual_yaml = StackTask.make_stack_yaml(discrimination)
 
     self.assertEqual(actual_yaml, expected_yaml)
+
+  def test_resolver_validation(self):
+    promises = self.make_target(
+      spec        = '3rdparty:promises',
+      target_type = HackagePackage,
+      package     = 'promises',
+      version     = '0.2',
+      resolver    = 'lts-3.0',
+    )
+
+    discrimination = self.make_target(
+      spec         = '3rdparty:discrimination',
+      target_type  = HackagePackage,
+      package      = 'discrimination',
+      version      = '0.1',
+      dependencies = [promises],
+      resolver     = 'lts-3.1',
+    )
+
+    self.assertRaises(TaskError, StackTask.make_stack_yaml, discrimination)
 
   def test_make_stack_yaml_for_remote_cabal_package(self):
     stack = self.make_target(
