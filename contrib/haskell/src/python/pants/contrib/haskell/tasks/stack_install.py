@@ -5,6 +5,7 @@
 from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackInstall(StackTask):
+  """Build all executables associated with the given Haskell target"""
   def execute(self):
     for dir in self.stack_task("install"):
       pass

@@ -8,6 +8,12 @@ import subprocess
 from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackRun(StackTask):
+  """Build and run an executable associated with the given Haskell target
+
+  You must specify which executable to run using the `--run-stack-run-executable`
+  option since Haskell projects may have more than one executable associated with
+  them.
+  """
   @classmethod
   def register_options(cls, register):
     super(StackRun, cls).register_options(register)

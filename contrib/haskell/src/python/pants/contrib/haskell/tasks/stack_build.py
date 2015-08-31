@@ -5,6 +5,7 @@
 from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackBuild(StackTask):
+  """Build the given Haskell target"""
   @classmethod
   def register_options(cls, register):
     super(StackBuild, cls).register_options(register)

@@ -5,6 +5,7 @@
 from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackBench(StackTask):
+  """Run all benchmarks for the given Haskell target"""
   def execute(self):
     for dir in self.stack_task("bench"):
       pass

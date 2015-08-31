@@ -5,6 +5,7 @@
 from pants.contrib.haskell.tasks.stack_task import StackTask
 
 class StackGhci(StackTask):
+  """Load the given Haskell target into the `ghci` REPL"""
   def execute(self):
     for dir in self.stack_task("ghci"):
       pass
