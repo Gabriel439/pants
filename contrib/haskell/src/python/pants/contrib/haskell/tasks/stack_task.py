@@ -7,6 +7,7 @@ import subprocess
 
 from pants.backend.core.tasks.task                 import Task
 from pants.base.build_environment                  import get_buildroot
+from pants.base.exceptions                         import TaskError
 from pants.contrib.haskell.targets.cabal_package   import CabalPackage
 from pants.contrib.haskell.targets.hackage_package import HackagePackage
 from pants.contrib.haskell.targets.haskell_package import HaskellPackage
@@ -24,6 +25,17 @@ class StackTask(Task):
 
   @staticmethod
   def make_stack_yaml(target):
+    for dependency in target.dependencies:
+      if target.resolver != dependency.resolver:
+        raise TaskError(
+          "Every package in a Haskell build graph must use the same resolver\n"
+          "\n"
+          "Root target : " + target.address.spec + "\n"
+          "  - Resolver: " + target.resolver + "\n"
+          "Dependency  : " + dependency.address.spec + "\n"
+          "  - Resolver: " + dependency.resolver + "\n"
+          )
+
     packages = [target] + target.dependencies
 
     hackage_packages = filter(StackTask.is_hackage_package, packages)
