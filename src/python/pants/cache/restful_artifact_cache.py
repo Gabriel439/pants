@@ -21,17 +21,21 @@ logger = logging.getLogger(__name__)
 # TODO do this in a central place
 logging.getLogger('requests').setLevel(logging.WARNING)
 
+
 class InvalidRESTfulCacheProtoError(ArtifactCacheError):
   """Indicates an invalid protocol used in a remote spec."""
   pass
 
+
 class RequestsSession(object):
   _session = None
+
   @classmethod
   def instance(cls):
     if cls._session is None:
       cls._session = requests.Session()
     return cls._session
+
 
 class RESTfulArtifactCache(ArtifactCache):
   """An artifact cache that stores the artifacts on a RESTful service."""
@@ -74,9 +78,9 @@ class RESTfulArtifactCache(ArtifactCache):
       return True
     return self._request('HEAD', self._remote_path_for_key(cache_key)) is not None
 
-  def use_cached_files(self, cache_key):
+  def use_cached_files(self, cache_key, hit_callback=None):
     if self._localcache.has(cache_key):
-      return self._localcache.use_cached_files(cache_key)
+      return self._localcache.use_cached_files(cache_key, hit_callback)
 
     remote_path = self._remote_path_for_key(cache_key)
     try:
@@ -84,7 +88,7 @@ class RESTfulArtifactCache(ArtifactCache):
       if response is not None:
         # Delegate storage and extraction to local cache
         byte_iter = response.iter_content(self.READ_SIZE_BYTES)
-        return self._localcache.store_and_use_artifact(cache_key, byte_iter)
+        return self._localcache.store_and_use_artifact(cache_key, byte_iter, hit_callback)
     except Exception as e:
       logger.warn('\nError while reading from remote artifact cache: {0}\n'.format(e))
       return UnreadableArtifact(cache_key, e)

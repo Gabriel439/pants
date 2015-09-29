@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 #
 # Note: In general, 'spec' should not be a user visible term, it is usually appropriate to
 # substitute 'address' instead.
-
 class BuildFileParser(object):
   """Parses BUILD files for a given repo build configuration."""
 
@@ -51,10 +50,9 @@ class BuildFileParser(object):
   class ExecuteError(BuildFileParserError):
     """An exception was encountered executing code in the BUILD file"""
 
-  def __init__(self, build_configuration, root_dir, run_tracker=None):
+  def __init__(self, build_configuration, root_dir):
     self._build_configuration = build_configuration
     self._root_dir = root_dir
-    self.run_tracker = run_tracker
 
   @property
   def root_dir(self):
@@ -127,9 +125,9 @@ class BuildFileParser(object):
     except SyntaxError as e:
       raise self.ParseError(_format_context_msg(e.lineno, e.offset, e.__class__.__name__, e))
     except Exception as e:
-        raise self.ParseError("{error_type}: {message}\n while parsing BUILD file {build_file}"
-                              .format(error_type=e.__class__.__name__,
-                                      message=e, build_file=build_file))
+      raise self.ParseError("{error_type}: {message}\n while parsing BUILD file {build_file}"
+                            .format(error_type=e.__class__.__name__,
+                                    message=e, build_file=build_file))
 
     parse_state = self._build_configuration.initialize_parse_state(build_file)
     try:

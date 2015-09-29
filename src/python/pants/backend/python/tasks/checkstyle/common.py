@@ -24,6 +24,7 @@ __all__ = (
 
 
 class OffByOneList(Sequence):
+
   def __init__(self, iterator):
     # Make sure we properly handle unicode chars in code files.
     self._list = list(iterator)
@@ -103,7 +104,7 @@ class PythonFile(object):
   @classmethod
   def parse(cls, filename):
     with codecs.open(filename) as fp:
-       blob = fp.read()
+      blob = fp.read()
     return cls(blob, filename)
 
   @classmethod
@@ -234,7 +235,6 @@ class Nit(object):
     self.severity = severity
     self._message = message
     self._line_number = line_number
-
 
   def __str__(self):
     """convert ascii for safe terminal output"""

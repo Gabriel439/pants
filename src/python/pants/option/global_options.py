@@ -65,6 +65,10 @@ class GlobalOptionsRegistrar(Optionable):
              help="Prints pants' version number and exits.")
 
     register('--plugins', advanced=True, type=list_option, help='Load these plugins.')
+    register('--plugin-cache-dir', advanced=True,
+             default=os.path.join(get_pants_cachedir(), 'plugins'),
+             help='Cache resolved plugin requirements here.')
+
     register('--backend-packages', advanced=True, type=list_option,
              help='Load backends from these packages that are already on the path.')
 
@@ -81,7 +85,7 @@ class GlobalOptionsRegistrar(Optionable):
     register('--pants-distdir', advanced=True, metavar='<dir>',
              default=os.path.join(buildroot, 'dist'),
              help='Write end-product artifacts to this dir.')
-    register('--config-override', advanced=True,
+    register('--config-override', advanced=True, action='append', metavar='<path>',
              help='A second config file, to override pants.ini.')
     register('--pantsrc', advanced=True, action='store_true', default=True,
              help='Use pantsrc files.')

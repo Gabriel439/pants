@@ -23,20 +23,6 @@ class Depmap(ConsoleTask):
     RESOURCE = 'RESOURCE'  # Resource belonging to Source Target
     TEST_RESOURCE = 'TEST_RESOURCE'  # Resource belonging to Test Target
 
-  @staticmethod
-  def _jar_id(jar):
-    if jar.rev:
-      return '{0}:{1}:{2}'.format(jar.org, jar.name, jar.rev)
-    else:
-      return '{0}:{1}'.format(jar.org, jar.name)
-
-  @staticmethod
-  def _address(address):
-    """
-    :type address: pants.base.address.SyntheticAddress
-    """
-    return '{0}:{1}'.format(address.spec_path, address.target_name)
-
   @classmethod
   def register_options(cls, register):
     super(Depmap, cls).register_options(register)
@@ -104,11 +90,12 @@ class Depmap(ConsoleTask):
             '{org}{sep}{name}').format(**params), is_internal_dep
 
   def _enumerate_visible_deps(self, dep, predicate):
-    dep_id, internal = self._dep_id(dep)
-
-    dependencies = sorted([x for x in getattr(dep, 'dependencies', [])]) + sorted(
-      [x for x in getattr(dep, 'jar_dependencies', [])] if not self.is_internal_only else [])
-
+    # We present the dependencies out of classpath order and instead in alphabetized internal deps,
+    # then alphabetized external deps order for ease in scanning output.
+    dependencies = sorted(x for x in getattr(dep, 'dependencies', []))
+    if not self.is_internal_only:
+      dependencies.extend(sorted((x for x in getattr(dep, 'jar_dependencies', [])),
+                                 key=lambda x: (x.org, x.name, x.rev, x.classifier)))
     for inner_dep in dependencies:
       dep_id, internal = self._dep_id(inner_dep)
       if predicate(internal):
@@ -130,6 +117,9 @@ class Depmap(ConsoleTask):
     def output_deps(dep, indent, outputted, stack):
       dep_id, internal = self._dep_id(dep)
 
+      if self.is_minimal and dep_id in outputted:
+        return
+
       if self.path_to:
         # If we hit the search target from self.path_to, yield the stack items and bail.
         if dep_id == self.path_to:
@@ -137,7 +127,7 @@ class Depmap(ConsoleTask):
             yield make_line(dep_id, indent)
           return
       else:
-        if not (dep_id in outputted and self.is_minimal) and self.output_candidate(internal):
+        if self.output_candidate(internal):
           yield make_line(dep_id,
                           0 if self.is_external_only else indent,
                           is_dupe=dep_id in outputted)

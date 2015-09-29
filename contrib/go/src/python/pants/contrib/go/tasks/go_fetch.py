@@ -10,7 +10,7 @@ import os
 import shutil
 from collections import defaultdict
 
-from pants.base.address import SyntheticAddress
+from pants.base.address import Address
 from pants.base.address_lookup_error import AddressLookupError
 from pants.base.exceptions import TaskError
 from pants.util.contextutil import temporary_dir
@@ -134,7 +134,7 @@ class GoFetch(GoTask):
           package_path = GoRemoteLibrary.remote_package_path(remote_root, remote_import_path)
           target_name = package_path or os.path.basename(remote_root)
 
-          address = SyntheticAddress(spec_path, target_name)
+          address = Address(spec_path, target_name)
           if address not in all_known_addresses:
             try:
               # If we've already resolved a package from this remote root, its ok to define an
@@ -197,6 +197,10 @@ class GoFetch(GoTask):
     out = self.go_dist.create_go_cmd('list', args=['std']).check_output()
     return frozenset(out.strip().split())
 
+  @staticmethod
+  def _is_relative(import_path):
+    return import_path.startswith('.')
+
   def _get_remote_import_paths(self, pkg, gopath=None):
     """Returns the remote import paths declared by the given Go `pkg`."""
     out = self.go_dist.create_go_cmd('list', args=['-json', pkg], gopath=gopath).check_output()
@@ -204,7 +208,12 @@ class GoFetch(GoTask):
       data = json.loads(out)
       imports = data.get('Imports', [])
       imports.extend(data.get('TestImports', []))
-      return [imp for imp in imports if imp not in self.go_stdlib]
+
+      return [imp for imp in imports
+              if (imp not in self.go_stdlib and
+                  # We assume relative imports are local to the package and skip attempts to
+                  # recursively resolve them.
+                  not self._is_relative(imp))]
     except ValueError as e:
       save_file = os.path.join(gopath, '.errors', pkg, 'list.json')
       with safe_open(save_file, 'w') as fp:

@@ -5,6 +5,7 @@
 from __future__ import (absolute_import, division, generators, nested_scopes, print_function,
                         unicode_literals, with_statement)
 
+import logging
 import os
 import select
 import socket
@@ -14,11 +15,20 @@ import threading
 from functools import partial
 
 
+logger = logging.getLogger(__name__)
+
+
 class NailgunSession(object):
   """Handles a single nailgun command session."""
 
   class ProtocolError(Exception):
-    """Thrown if there is an error in the underlying nailgun protocol."""
+    """Raised if there is an error in the underlying nailgun protocol."""
+
+  class TruncatedHeaderError(ProtocolError):
+    """Raised if there is a socket error while reading the header bytes."""
+
+  class TruncatedPayloadError(ProtocolError):
+    """Raised if there is a socket error while reading the payload bytes."""
 
   # See: http://www.martiansoftware.com/nailgun/protocol.html
   HEADER_FMT = b'>Ic'
@@ -111,12 +121,26 @@ class NailgunSession(object):
 
   def _read_chunk(self, buff):
     while len(buff) < self.HEADER_LENGTH:
-      buff += self._sock.recv(self.BUFF_SIZE)
+      received_bytes = self._sock.recv(self.BUFF_SIZE)
+      if not received_bytes:
+        raise self.TruncatedHeaderError(
+          'While reading chunk for payload length and command, socket.recv returned no bytes'
+          ' (client shut down).  Accumulated buffer was:\n{}\n'
+          .format(buff.decode('utf-8', errors='replace'))
+        )
+      buff += received_bytes
 
     payload_length, command = struct.unpack(self.HEADER_FMT, buff[:self.HEADER_LENGTH])
     buff = buff[self.HEADER_LENGTH:]
     while len(buff) < payload_length:
-      buff += self._sock.recv(self.BUFF_SIZE)
+      received_bytes = self._sock.recv(self.BUFF_SIZE)
+      if not received_bytes:
+        raise self.TruncatedPayloadError(
+          'While reading chunk for payload content, socket.recv returned no bytes'
+          ' (client shut down).  Accumulated buffer was:\n{}\n'
+          .format(buff.decode('utf-8', errors='replace'))
+        )
+      buff += received_bytes
 
     payload = buff[:payload_length]
     rest = buff[payload_length:]
@@ -128,9 +152,12 @@ class NailgunClient(object):
   """
 
   class NailgunError(Exception):
-    """Indicates an error connecting to or interacting with a nailgun server."""
+    """Indicates an error interacting with a nailgun server."""
 
-  DEFAULT_NG_HOST = 'localhost'
+  class NailgunConnectionError(NailgunError):
+    """Indicates an error upon initial connect to the nailgun server."""
+
+  DEFAULT_NG_HOST = '127.0.0.1'
   DEFAULT_NG_PORT = 2113
 
   # For backwards compatibility with nails expecting the ng c client special env vars.
@@ -148,7 +175,7 @@ class NailgunClient(object):
                workdir=None):
     """Creates a nailgun client that can be used to issue zero or more nailgun commands.
 
-    :param string host: the nailgun server to contact (defaults to localhost)
+    :param string host: the nailgun server to contact (defaults to '127.0.0.1')
     :param int port: the port the nailgun server is listening on (defaults to the default nailgun
       port: 2113)
     :param file ins: a file to read command standard input from (defaults to stdin) - can be None
@@ -167,8 +194,21 @@ class NailgunClient(object):
     self.execute = self.__call__
 
   def try_connect(self):
+    """Creates a socket, connects it to the nailgun and returns the connected socket.
+
+    :returns: a connected `socket.socket`.
+    :raises: `NailgunClient.NailgunConnectionError` on failure to connect.
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    return sock if sock.connect_ex((self._host, self._port)) == 0 else None
+    try:
+      sock.connect((self._host, self._port))
+    except (socket.error, socket.gaierror) as e:
+      logger.debug('Encountered socket exception {!r} when attempting connect to nailgun'.format(e))
+      sock.close()
+      raise self.NailgunConnectionError(
+        'Problem connecting to nailgun server at {}:{}: {!r}'.format(self._host, self._port, e))
+    else:
+      return sock
 
   def __call__(self, main_class, cwd=None, *args, **environment):
     """Executes the given main_class with any supplied args in the given environment.
@@ -183,22 +223,23 @@ class NailgunClient(object):
     """
     environment = dict(self.ENV_DEFAULTS.items() + environment.items())
     cwd = cwd or self._workdir
+
+    # N.B. This can throw NailgunConnectionError.
     sock = self.try_connect()
-    if not sock:
-      raise self.NailgunError('Problem connecting to nailgun server'
-                              ' {}:{}'.format(self._host, self._port))
 
     session = NailgunSession(sock, self._ins, self._out, self._err)
     try:
       return session.execute(cwd, main_class, *args, **environment)
     except socket.error as e:
-      raise self.NailgunError('Problem contacting nailgun server {}:{}:'
-                              ' {}'.format(self._host, self._port, e))
+      raise self.NailgunError('Problem communicating with nailgun server at {}:{}: {!r}'
+                              .format(self._host, self._port, e))
     except session.ProtocolError as e:
-      raise self.NailgunError('Problem executing the nailgun protocol with nailgun server {}:{}:'
-                              ' {}'.format(self._host, self._port, e))
+      raise self.NailgunError('Problem in nailgun protocol with nailgun server at {}:{}: {!r}'
+                              .format(self._host, self._port, e))
     finally:
       sock.close()
 
   def __repr__(self):
-    return 'NailgunClient(host={!r}, port={!r}, workdir={!r})'.format(self._host, self._port, self._workdir)
+    return 'NailgunClient(host={!r}, port={!r}, workdir={!r})'.format(self._host,
+                                                                      self._port,
+                                                                      self._workdir)

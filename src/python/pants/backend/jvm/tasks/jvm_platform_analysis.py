@@ -146,12 +146,14 @@ class JvmPlatformValidate(JvmPlatformAnalysisMixin, Task):
     def __hash__(self):
       return hash(type(self).__name__)
 
-
   @classmethod
   def product_types(cls):
     # NB(gmalmquist): These are fake products inserted to make sure validation is run very early.
-    # There's no point in doing lots of code-gen and compile work if it's doomed to fail.
-    return ['java', 'ivy_imports']
+    # There's no point in doing lots of code-gen and compile work if it's doomed to fail.  The
+    # 'java' product type indicates this task does codegen for java.
+    # TODO(John Sirois): plug this into a pre-products validation phase when one becomes available
+    # instead of using fake products.
+    return ['java']
 
   @classmethod
   def register_options(cls, register):
