@@ -2,12 +2,17 @@
 # Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-from pants.base.exceptions                  import TaskError
-from pants.contrib.haskell.targets.hackage  import Hackage
-from pants.contrib.haskell.targets.cabal    import Cabal
+from __future__ import (absolute_import, division, generators, nested_scopes, print_function,
+                        unicode_literals, with_statement)
+
+from pants.base.exceptions import TaskError
+from pants_test.base_test import BaseTest
+
+from pants.contrib.haskell.targets.cabal import Cabal
+from pants.contrib.haskell.targets.hackage import Hackage
 from pants.contrib.haskell.targets.stackage import Stackage
 from pants.contrib.haskell.tasks.stack_task import StackTask
-from pants_test.base_test                   import BaseTest
+
 
 class StackTaskTest(BaseTest):
 

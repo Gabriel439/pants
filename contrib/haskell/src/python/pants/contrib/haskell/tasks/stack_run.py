@@ -2,10 +2,14 @@
 # Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
+from __future__ import (absolute_import, division, generators, nested_scopes, print_function,
+                        unicode_literals, with_statement)
+
 import os
 import subprocess
 
 from pants.contrib.haskell.tasks.stack_task import StackTask
+
 
 class StackRun(StackTask):
   """Build and run an executable associated with the given Haskell target
@@ -14,6 +18,7 @@ class StackRun(StackTask):
   option since Haskell projects may have more than one executable associated with
   them.
   """
+
   @classmethod
   def register_options(cls, register):
     super(StackRun, cls).register_options(register)
