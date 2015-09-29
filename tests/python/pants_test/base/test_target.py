@@ -5,16 +5,13 @@
 from __future__ import (absolute_import, division, generators, nested_scopes, print_function,
                         unicode_literals, with_statement)
 
-from textwrap import dedent
+import os.path
 
-from pants.backend.core.wrapped_globs import Globs
-from pants.backend.jvm.targets.java_library import JavaLibrary
-from pants.base.address import BuildFileAddress, SyntheticAddress
-from pants.base.build_file_aliases import BuildFileAliases
 from pants.base.payload import Payload
 from pants.base.payload_field import DeferredSourcesField
 from pants.base.target import Target
 from pants_test.base_test import BaseTest
+from pants_test.subsystem.subsystem_util import subsystem_instance
 
 
 class TestDeferredSourcesTarget(Target):
@@ -25,41 +22,16 @@ class TestDeferredSourcesTarget(Target):
     })
     super(TestDeferredSourcesTarget, self).__init__(payload=payload, *args, **kwargs)
 
+
 class TargetTest(BaseTest):
-  @property
-  def alias_groups(self):
-    return BuildFileAliases.create(
-      targets={
-        'java_library': JavaLibrary,
-      },
-      context_aware_object_factories={
-        'globs': Globs,
-      },
-    )
 
   def test_derived_from_chain(self):
-    context = self.context()
-
     # add concrete target
-    build_file = self.add_to_build_file('y/BUILD', dedent('''
-    java_library(
-      name='concrete',
-      sources=['SourceA.scala'],
-    )
-    '''))
-    concrete_address = BuildFileAddress(build_file, 'concrete')
-    context.build_graph.inject_address_closure(concrete_address)
-    concrete = context.build_graph.get_target(concrete_address)
+    concrete = self.make_target('y:concrete', Target)
 
     # add synthetic targets
-    syn_one = context.add_new_target(SyntheticAddress('y', 'syn_one'),
-                                     JavaLibrary,
-                                     derived_from=concrete,
-                                     sources=["SourceB.scala"])
-    syn_two = context.add_new_target(SyntheticAddress('y', 'syn_two'),
-                                     JavaLibrary,
-                                     derived_from=syn_one,
-                                     sources=["SourceC.scala"])
+    syn_one = self.make_target('y:syn_one', Target, derived_from=concrete)
+    syn_two = self.make_target('y:syn_two', Target, derived_from=syn_one)
 
     # validate
     self.assertEquals(list(syn_two.derived_from_chain), [syn_one, concrete])
@@ -67,36 +39,46 @@ class TargetTest(BaseTest):
     self.assertEquals(list(concrete.derived_from_chain), [])
 
   def test_empty_traversable_properties(self):
-    build_file = self.add_to_build_file('BUILD', dedent('''
-    java_library(
-      name='foo',
-      sources=["foo.java"],
-    )
-    '''))
-    self.build_graph.inject_address_closure(BuildFileAddress(build_file, 'foo'))
-    target = self.build_graph.get_target(SyntheticAddress.parse('//:foo'))
+    target = self.make_target(':foo', Target)
     self.assertSequenceEqual([], list(target.traversable_specs))
     self.assertSequenceEqual([], list(target.traversable_dependency_specs))
 
   def test_deferred_sources_payload_field(self):
-    target = TestDeferredSourcesTarget(name='bar', address=SyntheticAddress.parse('//:bar'),
-                                       build_graph=self.build_graph,
-                                       deferred_sources_address=SyntheticAddress.parse('//:foo'))
+    foo = self.make_target(':foo', Target)
+    target = self.make_target(':bar',
+                              TestDeferredSourcesTarget,
+                              deferred_sources_address=foo.address)
     self.assertSequenceEqual([], list(target.traversable_specs))
     self.assertSequenceEqual([':foo'], list(target.traversable_dependency_specs))
 
   def test_illegal_kwargs(self):
-    with self.assertRaises(Target.UnknownArguments.Error) as cm:
-      context = self.context(for_subsystems=[Target.UnknownArguments])
-      build_file = self.add_to_build_file('foo/BUILD', dedent('''
-      java_library(
-        name='bar',
-        sources=[],
-        foobar='barfoo',
-      )
-      '''))
-      address = BuildFileAddress(build_file, 'bar')
-      context.build_graph.inject_address_closure(address)
-      context.build_graph.get_target(address)
-    self.assertTrue('foobar = barfoo' in str(cm.exception))
-    self.assertTrue('foo:bar' in str(cm.exception))
+    with subsystem_instance(Target.UnknownArguments):
+      with self.assertRaises(Target.UnknownArguments.Error) as cm:
+        self.make_target('foo:bar', Target, foobar='barfoo')
+      self.assertTrue('foobar = barfoo' in str(cm.exception))
+      self.assertTrue('foo:bar' in str(cm.exception))
+
+  def test_unknown_kwargs(self):
+    options = {Target.UnknownArguments.options_scope: {'ignored': {'Target': ['foobar']}}}
+    with subsystem_instance(Target.UnknownArguments, options=options):
+      target = self.make_target('foo:bar', Target, foobar='barfoo')
+      self.assertFalse(hasattr(target, 'foobar'))
+
+  def test_target_id_long(self):
+    long_path = 'dummy'
+    for i in range(1,30):
+      long_path = os.path.join(long_path, 'dummy{}'.format(i))
+    long_target = self.make_target('{}:foo'.format(long_path), Target)
+    long_id = long_target.id
+    self.assertEqual(len(long_id), 200)
+    self.assertEqual(long_id,
+                     'dummy.dummy1.dummy2.dummy3.dummy4.dummy5.dummy6.dummy7.dummy8.dummy9.dummy10.du.\
+c582ce0f60008b3dc8196ae9e6ff5e8c40096974.y20.dummy21.dummy22.dummy23.dummy24.dummy25.dummy26.dummy27.dummy28.dummy29.foo')
+
+  def test_target_id_short(self):
+    short_path = 'dummy'
+    for i in range(1,10):
+      short_path = os.path.join(short_path, 'dummy{}'.format(i))
+    short_target = self.make_target('{}:foo'.format(short_path), Target)
+    short_id = short_target.id
+    self.assertEqual(short_id, 'dummy.dummy1.dummy2.dummy3.dummy4.dummy5.dummy6.dummy7.dummy8.dummy9.foo')

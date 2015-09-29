@@ -6,6 +6,7 @@ from __future__ import (absolute_import, division, generators, nested_scopes, pr
                         unicode_literals, with_statement)
 
 import os
+from textwrap import dedent
 
 from pants.backend.core.wrapped_globs import Globs, RGlobs
 from pants.backend.jvm.targets.java_library import JavaLibrary
@@ -18,13 +19,13 @@ class FilesetRelPathWrapperTest(BaseTest):
 
   @property
   def alias_groups(self):
-    return BuildFileAliases.create(
+    return BuildFileAliases(
       targets={
         'java_library': JavaLibrary,
       },
       context_aware_object_factories={
-        'globs': Globs,
-        'rglobs': RGlobs,
+        'globs': Globs.factory,
+        'rglobs': RGlobs.factory,
       },
     )
 
@@ -112,6 +113,28 @@ class FilesetRelPathWrapperTest(BaseTest):
   def test_glob_exclude_string_in_list(self):
     self.add_to_build_file('y/BUILD', 'java_library(name="y", sources=globs("*.java", exclude=["fleem.java"]))')
     self.context().scan(self.build_root)
+
+  def test_glob_exclude_doesnt_modify_exclude_array(self):
+    self.add_to_build_file('y/BUILD', dedent("""
+      list_of_files = ["fleem.java"]
+      java_library(name="y", sources=globs("*.java", exclude=list_of_files))
+      java_library(name="z", sources=list_of_files)
+      """))
+
+    graph = self.context().scan(self.build_root)
+
+    self.assertEqual(['fleem.java'],
+                     list(graph.get_target_from_spec('y:z').sources_relative_to_source_root()))
+
+  def test_glob_invalid_keyword(self):
+    self.add_to_build_file('y/BUILD', 'java_library(name="y", sources=globs("*.java", invalid_keyword=["fleem.java"]))')
+    with self.assertRaises(AddressLookupError):
+      self.context().scan(self.build_root)
+
+  def test_glob_invalid_keyword_along_with_valid_ones(self):
+    self.add_to_build_file('y/BUILD', 'java_library(name="y", sources=globs("*.java", follow_links=True, invalid_keyword=["fleem.java"]))')
+    with self.assertRaises(AddressLookupError):
+      self.context().scan(self.build_root)
 
   def test_subdir_glob(self):
     self.add_to_build_file('y/BUILD', 'java_library(name="y", sources=globs("dir/*.scala"))')

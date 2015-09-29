@@ -14,13 +14,13 @@ from hashlib import sha1
 
 from twitter.common.collections.orderedset import OrderedSet
 
-from pants.base.build_invalidator import BuildInvalidator, CacheKeyGenerator
-from pants.base.cache_manager import InvalidationCacheManager, InvalidationCheck
 from pants.base.exceptions import TaskError
 from pants.base.fingerprint_strategy import TaskIdentityFingerprintStrategy
 from pants.base.worker_pool import Work
 from pants.cache.artifact_cache import UnreadableArtifact, call_insert, call_use_cached_files
 from pants.cache.cache_setup import CacheSetup
+from pants.invalidation.build_invalidator import BuildInvalidator, CacheKeyGenerator
+from pants.invalidation.cache_manager import InvalidationCacheManager, InvalidationCheck
 from pants.option.optionable import Optionable
 from pants.option.options_fingerprinter import OptionsFingerprinter
 from pants.option.scope import ScopeInfo
@@ -414,11 +414,14 @@ class TaskBase(SubsystemClientMixin, Optionable, AbstractClass):
     """
     return self.do_check_artifact_cache(vts)
 
-  def do_check_artifact_cache(self, vts, post_process_cached_vts=None):
+  def do_check_artifact_cache(self, vts, post_process_cached_vts=None, cache_hit_callback=None):
     """Checks the artifact cache for the specified list of VersionedTargetSets.
 
     Returns a pair (cached, uncached) of VersionedTargets that were
     satisfied/unsatisfied from the cache.
+
+    :param cache_hit_callback: A serializable function that expects a CacheKey as an argument.
+      Called after a cache hit, but before the cached artifact is extracted.
     """
     if not vts:
       return [], []
@@ -427,7 +430,7 @@ class TaskBase(SubsystemClientMixin, Optionable, AbstractClass):
     uncached_vts = OrderedSet(vts)
 
     read_cache = self._cache_factory.get_read_cache()
-    items = [(read_cache, vt.cache_key) for vt in vts]
+    items = [(read_cache, vt.cache_key, cache_hit_callback) for vt in vts]
 
     res = self.context.subproc_map(call_use_cached_files, items)
 
@@ -508,34 +511,6 @@ class TaskBase(SubsystemClientMixin, Optionable, AbstractClass):
       raise TaskError('Multiple targets specified: {}'
                       .format(', '.join([repr(t) for t in target_roots])))
     return target_roots[0]
-
-  def require_homogeneous_targets(self, accept_predicate, reject_predicate):
-    """Ensures that there is no ambiguity in the context according to the given predicates.
-
-    If any targets in the context satisfy the accept_predicate, and no targets satisfy the
-    reject_predicate, returns the accepted targets.
-
-    If no targets satisfy the accept_predicate, returns None.
-
-    Otherwise throws TaskError.
-    """
-    if len(self.context.target_roots) == 0:
-      raise TaskError('No target specified.')
-
-    accepted = self.context.targets(accept_predicate)
-    rejected = self.context.targets(reject_predicate)
-    if len(accepted) == 0:
-      # no targets were accepted, regardless of rejects
-      return None
-    elif len(rejected) == 0:
-      # we have at least one accepted target, and no rejected targets
-      return accepted
-    else:
-      # both accepted and rejected targets
-      # TODO: once https://github.com/pantsbuild/pants/issues/425 lands, we should add
-      # language-specific flags that would resolve the ambiguity here
-      raise TaskError('Mutually incompatible targets specified: {} vs {} (and {} others)'
-                      .format(accepted[0], rejected[0], len(accepted) + len(rejected) - 2))
 
 
 class Task(TaskBase):

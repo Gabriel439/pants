@@ -20,20 +20,9 @@ python_library(
   sources = ['addressable.py'],
   dependencies = [
     ':address',
+    ':build_file_target_factory',
     'src/python/pants/util:meta',
   ]
-)
-
-python_library(
-  name = 'build_configuration',
-  sources = ['build_configuration.py'],
-  dependencies = [
-    '3rdparty/python/twitter/commons:twitter.common.collections',
-    ':addressable',
-    ':build_file_aliases',
-    ':parse_context',
-    ':target',
-  ],
 )
 
 python_library(
@@ -65,52 +54,20 @@ python_library(
 )
 
 python_library(
-  name = 'build_file_address_mapper',
-  sources = ['build_file_address_mapper.py'],
-  dependencies = [
-    ':address',
-    ':address_lookup_error',
-    ':build_file',
-    ':build_file_parser',
-    ':build_environment',
-  ]
-)
-
-python_library(
   name = 'build_file_aliases',
   sources = ['build_file_aliases.py'],
-)
-
-python_library(
-  name = 'build_file_parser',
-  sources = ['build_file_parser.py'],
   dependencies = [
-    '3rdparty/python:six',
-    ':address',
-    ':build_environment',
-    ':build_file',
-    ':build_graph',
+    ':build_file_target_factory',
+    ':target',
+    'src/python/pants/util:memo',
   ]
 )
 
 python_library(
-  name = 'build_graph',
-  sources = ['build_graph.py'],
+  name = 'build_file_target_factory',
+  sources = ['build_file_target_factory.py'],
   dependencies = [
-    '3rdparty/python/twitter/commons:twitter.common.collections',
-    ':address',
-    ':address_lookup_error',
-  ]
-)
-
-python_library(
-  name = 'build_invalidator',
-  sources = ['build_invalidator.py'],
-  dependencies = [
-    ':hash_utils',
-    ':target', # XXX(fixme)
-    'src/python/pants/fs',
-    'src/python/pants/util:dirutil',
+    'src/python/pants/util:meta',
   ]
 )
 
@@ -128,24 +85,11 @@ python_library(
 )
 
 python_library(
-  name = 'cache_manager',
-  sources = ['cache_manager.py'],
+  name = 'dep_lookup_error',
   dependencies = [
-    ':build_graph',
-    ':build_invalidator',
-    ':target',
-    'src/python/pants/util:dirutil',
+    ':address_lookup_error',
   ],
-)
-
-python_library(
-  name = 'config',
-  sources = ['config.py'],
-  dependencies = [
-    '3rdparty/python:six',
-    ':build_environment',
-    'src/python/pants/util:strutil',
-  ]
+  sources = ['dep_lookup_error.py'],
 )
 
 python_library(
@@ -155,23 +99,6 @@ python_library(
     '3rdparty/python:six',
     ':revision',
     'src/python/pants:version',
-  ]
-)
-
-python_library(
-  name = 'extension_loader',
-  sources = ['extension_loader.py'],
-  dependencies = [
-    ':exceptions',
-    '3rdparty/python/twitter/commons:twitter.common.collections',
-    'src/python/pants/backend/authentication',
-    'src/python/pants/backend/codegen:plugin',
-    'src/python/pants/backend/core:plugin',
-    'src/python/pants/backend/jvm:plugin',
-    'src/python/pants/backend/maven_layout:plugin',
-    'src/python/pants/backend/project_info:plugin',
-    'src/python/pants/backend/python:plugin',
-    'src/python/pants/base:build_configuration',
   ]
 )
 
@@ -200,15 +127,6 @@ python_library(
 python_library(
   name = 'hash_utils',
   sources = ['hash_utils.py'],
-)
-
-python_library(
-  name = 'source_mapper',
-  sources = ['source_mapper.py'],
-  dependencies = [
-    ':build_environment',
-    ':payload_field',
-  ]
 )
 
 python_library(
@@ -252,6 +170,7 @@ python_library(
   dependencies = [
     ':build_environment',
     'src/python/pants/util:dirutil',
+    'src/python/pants:version',
   ],
 )
 
@@ -271,6 +190,7 @@ python_library(
   sources = ['source_root.py'],
   dependencies = [
     ':build_environment',
+    ':build_file_target_factory',
     ':build_manual',
     ':exceptions',
     ':parse_context',
@@ -290,7 +210,6 @@ python_library(
     ':hash_utils',
     ':payload',
     ':payload_field',
-    ':source_mapper',
     ':source_root',
     ':target_addressable',
     'src/python/pants/backend/core:wrapped_globs',

@@ -11,9 +11,10 @@ import re
 import traceback
 from collections import defaultdict
 
+import six
 from twitter.common.collections import OrderedSet, maybe_list
 
-from pants.base.address import BuildFileAddress, parse_spec
+from pants.base.address import Address, parse_spec
 from pants.base.address_lookup_error import AddressLookupError
 from pants.base.build_file import BuildFile
 
@@ -24,7 +25,6 @@ logger = logging.getLogger(__name__)
 # Note: In general, 'spec' should not be a user visible term, it is usually appropriate to
 # substitute 'address' for a spec resolved to an address, or 'address selector' if you are
 # referring to an unresolved spec string.
-
 class CmdLineSpecParser(object):
   """Parses address selectors as passed from the command line.
 
@@ -94,7 +94,7 @@ class CmdLineSpecParser(object):
       targets = ', '.join(self._excluded_target_map[CmdLineSpecParser._UNMATCHED_KEY])
       logger.debug('Targets after excludes: {targets}'.format(targets=targets))
       excluded_count = 0
-      for pattern, targets in self._excluded_target_map.iteritems():
+      for pattern, targets in six.iteritems(self._excluded_target_map):
         if pattern != CmdLineSpecParser._UNMATCHED_KEY:
           logger.debug('Targets excluded by pattern {pattern}\n  {targets}'
                        .format(pattern=pattern,
@@ -164,7 +164,7 @@ class CmdLineSpecParser(object):
       spec_parts[0] = normalize_spec_path(spec_parts[0])
       spec_path, target_name = parse_spec(':'.join(spec_parts))
       try:
-        build_file = self._address_mapper.from_cache(self._root_dir, spec_path)
-        return set([BuildFileAddress(build_file, target_name)])
+        self._address_mapper.from_cache(self._root_dir, spec_path)
       except BuildFile.BuildFileError as e:
         raise self.BadSpecError(e)
+      return {Address(spec_path, target_name)}

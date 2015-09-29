@@ -9,7 +9,7 @@ import os
 import shutil
 from collections import defaultdict
 
-from pants.base.address import SyntheticAddress
+from pants.base.address import Address
 from pants.base.source_root import SourceRoot
 from pants.util.contextutil import temporary_dir
 from pants_test.tasks.task_test_base import TaskTestBase
@@ -21,7 +21,7 @@ from pants.contrib.go.tasks.go_fetch import GoFetch
 
 class GoFetchTest(TaskTestBase):
 
-  address = SyntheticAddress.parse
+  address = Address.parse
 
   @classmethod
   def task_type(cls):
@@ -42,6 +42,26 @@ class GoFetchTest(TaskTestBase):
       )
     """)
     remote_import_ids = go_fetch._get_remote_import_paths('github.com/u/a',
+                                                          gopath=self.build_root)
+    self.assertItemsEqual(remote_import_ids, ['bitbucket.org/u/b', 'github.com/u/c'])
+
+  def test_get_remote_import_paths_relative_ignored(self):
+    go_fetch = self.create_task(self.context())
+    self.create_file('src/github.com/u/r/a/a_test.go', contents="""
+      package a
+
+      import (
+        "fmt"
+        "math"
+        "sync"
+
+        "bitbucket.org/u/b"
+        "github.com/u/c"
+        "./b"
+        "../c/d"
+      )
+    """)
+    remote_import_ids = go_fetch._get_remote_import_paths('github.com/u/r/a',
                                                           gopath=self.build_root)
     self.assertItemsEqual(remote_import_ids, ['bitbucket.org/u/b', 'github.com/u/c'])
 

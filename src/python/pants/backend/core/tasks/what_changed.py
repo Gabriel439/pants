@@ -10,7 +10,7 @@ import re
 from pants.backend.core.tasks.console_task import ConsoleTask
 from pants.base.build_environment import get_scm
 from pants.base.exceptions import TaskError
-from pants.base.source_mapper import SpecSourceMapper
+from pants.build_graph.source_mapper import SpecSourceMapper
 from pants.goal.workspace import ScmWorkspace
 
 
@@ -117,6 +117,7 @@ class ChangedFileTaskMixin(object):
   mapped to targets using LazySourceMapper. LazySourceMapper can optionally be used in "fast" mode,
   which stops searching for additional owners for a given source once a one is found.
   """
+
   @classmethod
   def register_change_file_options(cls, register):
     register('--fast', action='store_true', default=False,
@@ -151,6 +152,7 @@ class ChangedFileTaskMixin(object):
 
 class WhatChanged(ChangedFileTaskMixin, ConsoleTask):
   """Emits the targets that have been modified since a given commit."""
+
   @classmethod
   def register_options(cls, register):
     super(WhatChanged, cls).register_options(register)

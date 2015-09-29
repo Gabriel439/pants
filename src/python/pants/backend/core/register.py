@@ -20,9 +20,11 @@ from pants.backend.core.tasks.clean import Cleaner, Invalidator
 from pants.backend.core.tasks.confluence_publish import ConfluencePublish
 from pants.backend.core.tasks.deferred_sources_mapper import DeferredSourcesMapper
 from pants.backend.core.tasks.dependees import ReverseDepmap
+from pants.backend.core.tasks.explain_options_task import ExplainOptionsTask
 from pants.backend.core.tasks.filemap import Filemap
 from pants.backend.core.tasks.filter import Filter
 from pants.backend.core.tasks.list_goals import ListGoals
+from pants.backend.core.tasks.list_owners import ListOwners
 from pants.backend.core.tasks.listtargets import ListTargets
 from pants.backend.core.tasks.markdown_to_html import MarkdownToHtml
 from pants.backend.core.tasks.minimal_cover import MinimalCover
@@ -39,12 +41,12 @@ from pants.backend.core.wrapped_globs import Globs, RGlobs, ZGlobs
 from pants.base.build_environment import get_buildroot, pants_version
 from pants.base.build_file_aliases import BuildFileAliases
 from pants.base.source_root import SourceRoot
-from pants.base.target import Target
 from pants.goal.task_registrar import TaskRegistrar as task
 
 
 class BuildFilePath(object):
   """Returns path containing this ``BUILD`` file."""
+
   def __init__(self, parse_context):
     self.rel_path = parse_context.rel_path
 
@@ -52,21 +54,8 @@ class BuildFilePath(object):
     return os.path.join(get_buildroot(), self.rel_path)
 
 
-class PantsObsolete(object):
-  _warning_emitted = False
-
-  @classmethod
-  def pants(cls, target):
-    if not cls._warning_emitted:
-      cls._warning_emitted = True
-      print('*** pants() wrapper is obsolete and will be removed in a future release. '
-            'See http://pantsbuild.github.io/build_files.html ***',
-            file=sys.stderr)
-    return target
-
-
 def build_file_aliases():
-  return BuildFileAliases.create(
+  return BuildFileAliases(
     targets={
       # NB: the 'dependencies' alias is deprecated in favor of the 'target' alias
       'dependencies': DeprecatedDependencies,
@@ -79,18 +68,16 @@ def build_file_aliases():
       'ConfluencePublish': ConfluencePublish,
       'get_buildroot': get_buildroot,
       'pants_version': pants_version,
-      # TODO(Eric Ayers) pants() was officially deprecated in 0.0.24. Remove this function soon.
-      'pants': PantsObsolete.pants,
       'wiki_artifact': WikiArtifact,
       'Wiki': Wiki,
     },
     context_aware_object_factories={
       'buildfile_path': BuildFilePath,
-      'globs': Globs,
+      'globs': Globs.factory,
       'from_target': FromTarget,
-      'rglobs': RGlobs,
+      'rglobs': RGlobs.factory,
       'source_root': SourceRoot.factory,
-      'zglobs': ZGlobs,
+      'zglobs': ZGlobs.factory,
     }
   )
 
@@ -172,6 +159,9 @@ def register_goals():
   task(name='changed', action=WhatChanged).install().with_description(
       'Print the targets changed since some prior commit.')
 
+  task(name='list-owners', action=ListOwners).install().with_description(
+      'Print targets that own the specified source')
+
   # Stub for other goals to schedule 'compile'. See noop.py for more on why this is useful.
   task(name='compile', action=NoopCompile).install('compile')
   task(name='compile-changed', action=CompileChanged).install().with_description(
@@ -188,6 +178,5 @@ def register_goals():
   task(name='bash-completion', action=BashCompletionTask).install().with_description(
     'Dump bash shell script for autocompletion of pants command lines.')
 
-
-def global_subsystems():
-  return (Target.UnknownArguments,)
+  task(name='options', action=ExplainOptionsTask).install().with_description(
+    'List what options pants has set.')

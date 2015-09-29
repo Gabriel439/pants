@@ -85,7 +85,7 @@ def parse_spec(spec, relative_to=None):
   return spec_path, target_name
 
 
-class Addresses (namedtuple('Addresses', ['addresses', 'rel_path'])):
+class Addresses(namedtuple('Addresses', ['addresses', 'rel_path'])):
   """ Used as a sentinel type for identifying a list of string specs.
 
   addresses: list of string specs
@@ -113,14 +113,24 @@ class Address(AbstractClass):
   Where ``path/to/buildfile:targetname`` is the dependent target address.
   """
 
+  @classmethod
+  def parse(cls, spec, relative_to=''):
+    """Parses an address from its serialized form.
+
+    :param string spec: An address in string form <path>:<name>.
+    :param string relative_to: For sibling specs, ie: ':another_in_same_build_family', interprets
+                               the missing spec_path part as `relative_to`.
+    :returns: A new address.
+    :rtype: :class:`pants.base.address.Address`
+    """
+    spec_path, target_name = parse_spec(spec, relative_to=relative_to)
+    return cls(spec_path, target_name)
+
   def __init__(self, spec_path, target_name):
     """
     :param string spec_path: The path from the root of the repo to this Target.
     :param string target_name: The name of a target this Address refers to.
     """
-    # TODO(John Sirois): AbstractClass / Interface should probably have this feature built in.
-    if type(self) == Address:
-      raise TypeError('Cannot instantiate abstract class Address')
     norm_path = os.path.normpath(spec_path)
     self._spec_path = norm_path if norm_path != '.' else ''
     self._target_name = target_name
@@ -148,10 +158,6 @@ class Address(AbstractClass):
   def relative_spec(self):
     return ':{target_name}'.format(target_name=self._target_name)
 
-  @property
-  def is_synthetic(self):
-    return False
-
   def reference(self, referencing_path=None):
     """How to reference this address in a BUILD file."""
     if referencing_path and self._spec_path == referencing_path:
@@ -167,6 +173,7 @@ class Address(AbstractClass):
             self._target_name == other._target_name)
 
   _hash = None
+
   def __hash__(self):
     if self._hash is None:
       self._hash = hash((self._spec_path, self._target_name))
@@ -183,34 +190,28 @@ class Address(AbstractClass):
 
 
 class BuildFileAddress(Address):
+  """Represents the address of a type materialized from a BUILD file."""
+
   def __init__(self, build_file, target_name=None):
-    self.build_file = build_file
+    """
+    :param build_file: The build file that contains the object this address points to.
+    :type build_file: :class:`pants.base.build_file.BuildFile`
+    :param string target_name: The name of the target within the BUILD file; defaults to the default
+                               target, aka the name of the BUILD file parent dir.
+    """
     spec_path = os.path.dirname(build_file.relpath)
-    default_target_name = os.path.basename(spec_path)
     super(BuildFileAddress, self).__init__(spec_path=spec_path,
-                                           target_name=target_name or default_target_name)
-
-  def __repr__(self):
-    return ("BuildFileAddress({build_file}, {target_name})"
-            .format(build_file=self.build_file,
-                    target_name=self.target_name))
-
-
-class SyntheticAddress(Address):
-  @classmethod
-  def parse(cls, spec, relative_to=''):
-    """
-    :param string spec: an address in string form <path>:<name>
-    :param string relative_to: For sibling specs, ie: ':another_in_same_build_family', interprets
-    the missing spec_path part as `relative_to`.
-    :return:
-    """
-    spec_path, target_name = parse_spec(spec, relative_to=relative_to)
-    return cls(spec_path, target_name)
-
-  def __repr__(self):
-    return "SyntheticAddress({spec})".format(spec=self.spec)
+                                           target_name=target_name or os.path.basename(spec_path))
+    self._build_file = build_file
 
   @property
-  def is_synthetic(self):
-    return True
+  def build_file(self):
+    """The build file that contains the object this address points to.
+
+    :rtype: :class:`pants.base.build_file.BuildFile`
+    """
+    return self._build_file
+
+  def __repr__(self):
+    return ('BuildFileAddress({build_file}, {target_name})'
+            .format(build_file=self.build_file, target_name=self.target_name))

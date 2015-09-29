@@ -14,6 +14,7 @@ class ListTargets(ConsoleTask):
 
   If no targets are specified, lists all targets in the workspace.
   """
+
   @classmethod
   def register_options(cls, register):
     super(ListTargets, cls).register_options(register)
@@ -36,7 +37,7 @@ class ListTargets(ConsoleTask):
   def console_output(self, targets):
     if self._provides:
       def extract_artifact_id(target):
-        provided_jar, _, _ = target.get_artifact_info()
+        provided_jar, _ = target.get_artifact_info()
         return '{0}#{1}'.format(provided_jar.org, provided_jar.name)
 
       extractors = dict(
