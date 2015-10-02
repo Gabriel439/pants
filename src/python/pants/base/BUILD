@@ -16,16 +16,6 @@ python_library(
 )
 
 python_library(
-  name = 'addressable',
-  sources = ['addressable.py'],
-  dependencies = [
-    ':address',
-    ':build_file_target_factory',
-    'src/python/pants/util:meta',
-  ]
-)
-
-python_library(
   name = 'build_environment',
   sources = ['build_environment.py'],
   dependencies = [
@@ -57,9 +47,8 @@ python_library(
   name = 'build_file_aliases',
   sources = ['build_file_aliases.py'],
   dependencies = [
-    ':build_file_target_factory',
-    ':target',
-    'src/python/pants/util:memo',
+    ':deprecated',
+    'src/python/pants/build_graph',
   ]
 )
 
@@ -202,29 +191,8 @@ python_library(
   name = 'target',
   sources = ['target.py'],
   dependencies = [
-    '3rdparty/python:six',
-    '3rdparty/python/twitter/commons:twitter.common.collections',
-    ':address',
-    ':build_environment',
-    ':fingerprint_strategy',
-    ':hash_utils',
-    ':payload',
-    ':payload_field',
-    ':source_root',
-    ':target_addressable',
-    'src/python/pants/backend/core:wrapped_globs',
-    'src/python/pants/option',
-    'src/python/pants/subsystem',
-  ],
-)
-
-python_library(
-  name = 'target_addressable',
-  sources = ['target_addressable.py'],
-  dependencies = [
-    '3rdparty/python:six',
-    ':addressable',
-    ':exceptions',
+    ':deprecated',
+    'src/python/pants/build_graph',
   ],
 )
 
