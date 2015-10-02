@@ -13,14 +13,15 @@ from pants.backend.codegen.targets.python_thrift_library import PythonThriftLibr
 from pants.backend.core.from_target import FromTarget
 from pants.backend.core.targets.resources import Resources
 from pants.backend.core.tasks.what_changed import WhatChanged
-from pants.backend.core.wrapped_globs import RGlobs
+from pants.backend.core.wrapped_globs import Globs, RGlobs
 from pants.backend.jvm.targets.jar_dependency import JarDependency
 from pants.backend.jvm.targets.jar_library import JarLibrary
 from pants.backend.jvm.targets.java_library import JavaLibrary
+from pants.backend.jvm.targets.scala_jar_dependency import ScalaJarDependency
 from pants.backend.jvm.targets.unpacked_jars import UnpackedJars
 from pants.backend.python.targets.python_library import PythonLibrary
-from pants.base.build_file_aliases import BuildFileAliases
 from pants.base.source_root import SourceRoot
+from pants.build_graph.build_file_aliases import BuildFileAliases
 from pants.goal.workspace import Workspace
 from pants_test.tasks.task_test_base import ConsoleTaskTestBase
 
@@ -29,7 +30,7 @@ class BaseWhatChangedTest(ConsoleTaskTestBase):
 
   @property
   def alias_groups(self):
-    return BuildFileAliases.create(
+    return BuildFileAliases(
       targets={
         'java_library': JavaLibrary,
         'python_library': PythonLibrary,
@@ -42,11 +43,13 @@ class BaseWhatChangedTest(ConsoleTaskTestBase):
       },
       context_aware_object_factories={
         'source_root': SourceRoot.factory,
-        'rglobs': RGlobs,
+        'globs': Globs.factory,
+        'rglobs': RGlobs.factory,
         'from_target': FromTarget,
       },
       objects={
         'jar': JarDependency,
+        'scala_jar': ScalaJarDependency,
       }
     )
 
@@ -198,6 +201,13 @@ class WhatChangedTest(BaseWhatChangedTest):
       java_library(
         name='scripts',
         sources=['a/build/scripts.java'],
+      )
+    """))
+
+    self.add_to_build_file('BUILD.config', dedent("""
+      resources(
+        name='pants-config',
+        sources = globs('pants.ini*')
       )
     """))
 
@@ -360,4 +370,10 @@ class WhatChangedTest(BaseWhatChangedTest):
       'root/proto:external-source',
       'root/proto:external-source-jars',
       workspace=self.workspace(files=['root/proto/BUILD'])
+    )
+
+  def test_root_config(self):
+    self.assert_console_output(
+      ':pants-config',
+      workspace=self.workspace(files=['pants.ini'])
     )

@@ -15,8 +15,8 @@ from pants.backend.jvm.targets.java_library import JavaLibrary
 from pants.backend.jvm.targets.jvm_binary import JvmBinary
 from pants.backend.jvm.targets.scala_library import ScalaLibrary
 from pants.backend.jvm.tasks.jar_create import JarCreate, is_jvm_library
-from pants.base.build_file_aliases import BuildFileAliases
 from pants.base.source_root import SourceRoot
+from pants.build_graph.build_file_aliases import BuildFileAliases
 from pants.util.contextutil import open_zip
 from pants_test.jvm.jar_task_test_base import JarTaskTestBase
 from pants_test.tasks.task_test_base import ensure_cached
@@ -30,7 +30,7 @@ class JarCreateTestBase(JarTaskTestBase):
 
   @property
   def alias_groups(self):
-    return super(JarCreateTestBase, self).alias_groups.merge(BuildFileAliases.create(
+    return super(JarCreateTestBase, self).alias_groups.merge(BuildFileAliases(
       targets={
         'java_library': JavaLibrary,
         'java_thrift_library': JavaThriftLibrary,
@@ -43,6 +43,7 @@ class JarCreateTestBase(JarTaskTestBase):
   def setUp(self):
     super(JarCreateTestBase, self).setUp()
     self.set_options(compressed=False, pants_bootstrapdir='~/.cache/pants', max_subprocess_args=100)
+
 
 class JarCreateMiscTest(JarCreateTestBase):
 

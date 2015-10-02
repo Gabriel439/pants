@@ -9,11 +9,13 @@ import os
 import shutil
 
 from pants.backend.jvm.subsystems.jvm_tool_mixin import JvmToolMixin
+from pants.backend.jvm.targets.exclude import Exclude
 from pants.backend.jvm.targets.jar_dependency import JarDependency
 from pants.backend.jvm.targets.jar_library import JarLibrary
+from pants.backend.jvm.targets.scala_jar_dependency import ScalaJarDependency
 from pants.backend.jvm.tasks.bootstrap_jvm_tools import BootstrapJvmTools
 from pants.base.build_environment import get_pants_cachedir
-from pants.base.build_file_aliases import BuildFileAliases
+from pants.build_graph.build_file_aliases import BuildFileAliases
 from pants.ivy.bootstrapper import Bootstrapper
 from pants_test.tasks.task_test_base import TaskTestBase
 
@@ -24,12 +26,14 @@ class JvmToolTaskTestBase(TaskTestBase):
   @property
   def alias_groups(self):
     # Aliases appearing in our real BUILD.tools.
-    return BuildFileAliases.create(
+    return BuildFileAliases(
       targets={
         'jar_library': JarLibrary,
       },
       objects={
+        'exclude': Exclude,
         'jar': JarDependency,
+        'scala_jar': ScalaJarDependency,
       },
     )
 
@@ -93,6 +97,9 @@ class JvmToolTaskTestBase(TaskTestBase):
     # Bootstrap the tools needed by the task under test.
     # We need the bootstrap task's workdir to be under the test's .pants.d, so that it can
     # use artifact caching.  Making it a sibling of the main task's workdir achieves this.
+    self.bootstrap_task_type._alternate_target_roots(context.options,
+                                                     self.address_mapper,
+                                                     self.build_graph)
     bootstrap_workdir = os.path.join(os.path.dirname(task.workdir), 'bootstrap_jvm_tools')
     self.bootstrap_task_type(context, bootstrap_workdir).execute()
     return task

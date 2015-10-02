@@ -16,6 +16,7 @@ target(
     ':ivy_utils',
     ':jar_publish_unit_test',
     ':junit_run',
+    ':jvm_dependency_usage',
     ':jvm_platform_analysis',
     ':jvm_run',
     ':resources_task',
@@ -31,9 +32,10 @@ python_tests(
   name = 'binary_create',
   sources = ['test_binary_create.py'],
   dependencies = [
-    'src/python/pants/backend/core:plugin',
-    'src/python/pants/backend/jvm:plugin',
+    ':jvm_binary_task_test_base',
+    'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/jvm/tasks:binary_create',
+    'src/python/pants/util:contextutil',
     'tests/python/pants_test/jvm:jvm_tool_task_test_base',
   ]
 )
@@ -43,14 +45,22 @@ python_tests(
   sources = ['test_bootstrap_jvm_tools.py'],
   dependencies = [
     'src/python/pants/backend/core/tasks:task',
+    'src/python/pants/backend/jvm/subsystems:shader',
     'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/jvm/tasks:bootstrap_jvm_tools',
     'src/python/pants/backend/jvm/tasks:jvm_tool_task_mixin',
     'src/python/pants/java/distribution',
     'src/python/pants/java:executor',
-    'src/python/pants/java/jar:shader',
     'src/python/pants/util:contextutil',
     'tests/python/pants_test/jvm:jvm_tool_task_test_base',
+  ]
+)
+
+python_tests(
+  name = 'bootstrap_jvm_tools_integration',
+  sources = ['test_bootstrap_jvm_tools_integration.py'],
+  dependencies = [
+    'tests/python/pants_test:int-test',
   ]
 )
 
@@ -60,19 +70,29 @@ python_tests(
   dependencies = [
     'src/python/pants/backend/jvm/tasks:benchmark_run',
     'src/python/pants/base:exceptions',
-    'src/python/pants/base:target',
+    'src/python/pants/build_graph',
     'tests/python/pants_test/jvm:jvm_tool_task_test_base',
   ]
+)
+
+python_tests(
+  name = 'binary_create_integration',
+  sources = ['test_binary_create_integration.py'],
+  dependencies = [
+    'src/python/pants/base:build_environment',
+    'tests/python/pants_test:int-test',
+  ],
 )
 
 python_tests(
   name = 'bundle_create',
   sources = ['test_bundle_create.py'],
   dependencies = [
-    'src/python/pants/backend/core:plugin',
-    'src/python/pants/backend/jvm:plugin',
-    'src/python/pants/backend/jvm/tasks:binary_create',
-    'tests/python/pants_test/jvm:jvm_tool_task_test_base',
+    ':jvm_binary_task_test_base',
+    'src/python/pants/backend/jvm/targets:jvm',
+    'src/python/pants/backend/jvm/tasks:bundle_create',
+    'src/python/pants/backend/jvm:jar_dependency_utils',
+    'src/python/pants/util:contextutil',
   ]
 )
 
@@ -83,7 +103,6 @@ python_tests(
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/tasks:checkstyle',
     'src/python/pants/base:address',
-    'src/python/pants/base:build_file_aliases',
     'src/python/pants/base:exceptions',
     'tests/python/pants_test/jvm:nailgun_task_test_base',
     'tests/python/pants_test/tasks:task_test_base',
@@ -127,10 +146,10 @@ python_tests(
   name = 'ivy_imports',
   sources = ['test_ivy_imports.py'],
   dependencies = [
-    'src/python/pants/backend/core/targets:common',
     'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/jvm/tasks:ivy_imports',
-    'src/python/pants/base:build_file_aliases',
+    'src/python/pants/backend/jvm/tasks:jar_import_products',
+    'src/python/pants/backend/jvm:jar_dependency_utils',
     'src/python/pants/util:contextutil',
     'tests/python/pants_test/jvm:nailgun_task_test_base',
   ]
@@ -141,11 +160,13 @@ python_tests(
   sources = ['test_ivy_resolve.py'],
   dependencies = [
     '3rdparty/python/twitter/commons:twitter.common.collections',
+    'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/targets:jvm',
-    'src/python/pants/backend/jvm/targets:scala',
     'src/python/pants/backend/jvm/tasks:ivy_resolve',
+    'src/python/pants/invalidation',
+    'src/python/pants/backend/jvm:ivy_utils',
     'src/python/pants/util:contextutil',
-    'tests/python/pants_test/jvm:nailgun_task_test_base',
+    'tests/python/pants_test/jvm:jvm_tool_task_test_base',
   ]
 )
 
@@ -153,14 +174,14 @@ python_tests(
   name = 'ivy_utils',
   sources = ['test_ivy_utils.py'],
   dependencies = [
-    '3rdparty/python:mock',
     'src/python/pants/backend/core:plugin',
-    'src/python/pants/backend/jvm:plugin',
+    'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/jvm:ivy_utils',
+    'src/python/pants/backend/jvm:jar_dependency_utils',
+    'src/python/pants/backend/jvm:plugin',
     'src/python/pants/ivy',
     'src/python/pants/util:contextutil',
     'tests/python/pants_test:base_test',
-    'tests/python/pants_test/base:context_utils',
   ]
 )
 
@@ -169,6 +190,28 @@ python_tests(
   sources = ['test_jar_publish_unit.py'],
   dependencies = [
     'src/python/pants/backend/jvm/tasks:jar_publish',
+    'tests/python/pants_test/tasks:task_test_base',
+  ]
+)
+
+python_library(
+  name = 'jvm_binary_task_test_base',
+  sources = ['jvm_binary_task_test_base.py'],
+  dependencies = [
+    'src/python/pants/backend/jvm/tasks:classpath_products',
+    'src/python/pants/backend/jvm:jar_dependency_utils',
+    'tests/python/pants_test/jvm:jvm_tool_task_test_base',
+  ]
+)
+
+python_tests(
+  name = 'jvm_dependency_usage',
+  sources = ['test_jvm_dependency_usage.py'],
+  dependencies = [
+    'src/python/pants/backend/jvm/tasks:jvm_dependency_usage',
+    'src/python/pants/base:payload',
+    'src/python/pants/base:payload_field',
+    'src/python/pants/goal:products',
     'tests/python/pants_test/tasks:task_test_base',
   ]
 )
@@ -203,8 +246,8 @@ python_tests(
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/tasks:junit_run',
     'src/python/pants/backend/python/tasks:python',
-    'src/python/pants/base:build_file_aliases',
     'src/python/pants/base:exceptions',
+    'src/python/pants/build_graph',
     'src/python/pants/goal:products',
     'src/python/pants/ivy',
     'src/python/pants/java/distribution:distribution',
@@ -236,15 +279,6 @@ python_tests(
 )
 
 python_tests(
-  name = 'jvm_binary_integration',
-  sources = ['test_jvm_binary_integration.py'],
-  dependencies = [
-    'src/python/pants/base:build_environment',
-    'tests/python/pants_test:int-test',
-  ],
-)
-
-python_tests(
   name = 'resources_task',
   sources = ['test_resources_task.py'],
   dependencies = [
@@ -252,7 +286,7 @@ python_tests(
     'src/python/pants/base:fingerprint_strategy',
     'src/python/pants/base:payload',
     'src/python/pants/base:payload_field',
-    'src/python/pants/base:target',
+    'src/python/pants/build_graph',
     'src/python/pants/goal:products',
     'src/python/pants/util:dirutil',
     'tests/python/pants_test/tasks:task_test_base',
@@ -263,10 +297,11 @@ python_tests(
   name = 'prepare_resources',
   sources = ['test_prepare_resources.py'],
   dependencies = [
+    'src/python/pants/backend/core/targets:common',
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/targets:jvm',
-    'src/python/pants/backend/jvm/targets:scala',
     'src/python/pants/backend/jvm/tasks:prepare_resources',
+    'src/python/pants/build_graph',
     'src/python/pants/util:contextutil',
     'tests/python/pants_test/tasks:task_test_base',
   ]
@@ -278,7 +313,6 @@ python_tests(
   dependencies = [
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/targets:jvm',
-    'src/python/pants/backend/jvm/targets:scala',
     'src/python/pants/backend/jvm/tasks:prepare_services',
     'src/python/pants/util:contextutil',
     'tests/python/pants_test/tasks:task_test_base',
@@ -289,13 +323,14 @@ python_tests(
   name = 'scalastyle',
   sources = ['test_scalastyle.py'],
   dependencies = [
+    'src/python/pants/backend/jvm/subsystems:scala_platform',
     'src/python/pants/backend/jvm/targets:java',
+    'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/jvm/targets:scala',
     'src/python/pants/backend/jvm/tasks:scalastyle',
-    'src/python/pants/base:address',
-    'src/python/pants/base:build_file_aliases',
     'src/python/pants/base:exceptions',
     'tests/python/pants_test/jvm:nailgun_task_test_base',
+    'tests/python/pants_test/subsystem:subsystem_utils',
     'tests/python/pants_test/tasks:task_test_base',
   ]
 )
@@ -312,10 +347,12 @@ python_tests(
   name = 'unpack_jars',
   sources = ['test_unpack_jars.py'],
   dependencies = [
-    'src/python/pants/backend/core/targets:common',
     'src/python/pants/backend/jvm/targets:jvm',
+    'src/python/pants/backend/jvm/tasks:jar_import_products',
     'src/python/pants/backend/jvm/tasks:unpack_jars',
-    'src/python/pants/base:target',
+    'src/python/pants/backend/jvm:jar_dependency_utils',
+    'src/python/pants/util:contextutil',
+    'src/python/pants/util:dirutil',
     'tests/python/pants_test/tasks:task_test_base',
   ]
 )

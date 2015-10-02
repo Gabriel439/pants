@@ -10,10 +10,7 @@ import uuid
 
 from pants.backend.core.targets.dependencies import Dependencies
 from pants.backend.core.tasks.group_task import GroupIterator, GroupMember, GroupTask
-from pants.backend.jvm.targets.java_library import JavaLibrary
-from pants.backend.jvm.targets.scala_library import ScalaLibrary
-from pants.backend.python.targets.python_library import PythonLibrary
-from pants.base.target import Target
+from pants.build_graph.target import Target
 from pants.engine.round_manager import RoundManager
 from pants_test.base_test import BaseTest
 
@@ -43,7 +40,8 @@ class GroupIteratorTestBase(BaseTest):
     self.blue = self.group_member('blue', lambda tgt: 'blue' in tgt.name)
 
   def iterate(self, *targets):
-    context = self.context(target_roots=targets)
+    context = self.context(target_roots=targets,
+                           for_task_types=[self.red, self.green, self.blue])
 
     def workdir():
       return None
@@ -56,11 +54,11 @@ class GroupIteratorTestBase(BaseTest):
 
 class GroupIteratorSingleTest(GroupIteratorTestBase):
   def test(self):
-    colorless = self.make_target('root:colorless', JavaLibrary)
-    a_red = self.make_target('root:a_red', JavaLibrary, dependencies=[colorless])
-    b_red = self.make_target('root:b_red', JavaLibrary, dependencies=[a_red])
-    c_red = self.make_target('root:c_red', JavaLibrary, dependencies=[a_red, colorless])
-    d_red = self.make_target('root:d_red', JavaLibrary, dependencies=[b_red, c_red])
+    colorless = self.make_target('root:colorless', Target)
+    a_red = self.make_target('root:a_red', Target, dependencies=[colorless])
+    b_red = self.make_target('root:b_red', Target, dependencies=[a_red])
+    c_red = self.make_target('root:c_red', Target, dependencies=[a_red, colorless])
+    d_red = self.make_target('root:d_red', Target, dependencies=[b_red, c_red])
 
     chunks = self.iterate(d_red)
     self.assertEqual(1, len(chunks))
@@ -72,12 +70,12 @@ class GroupIteratorSingleTest(GroupIteratorTestBase):
 
 class GroupIteratorMultipleTest(GroupIteratorTestBase):
   def test(self):
-    colorless = self.make_target('root:colorless', JavaLibrary)
-    a_red = self.make_target('root:a_red', JavaLibrary, dependencies=[colorless])
-    a_blue = self.make_target('root:a_blue', JavaLibrary, dependencies=[a_red])
-    a_green = self.make_target('root:a_green', JavaLibrary, dependencies=[a_blue, colorless])
-    b_red = self.make_target('root:b_red', JavaLibrary, dependencies=[a_blue])
-    c_red = self.make_target('root:c_red', JavaLibrary, dependencies=[b_red])
+    colorless = self.make_target('root:colorless', Target)
+    a_red = self.make_target('root:a_red', Target, dependencies=[colorless])
+    a_blue = self.make_target('root:a_blue', Target, dependencies=[a_red])
+    a_green = self.make_target('root:a_green', Target, dependencies=[a_blue, colorless])
+    b_red = self.make_target('root:b_red', Target, dependencies=[a_blue])
+    c_red = self.make_target('root:c_red', Target, dependencies=[b_red])
 
     chunks = self.iterate(c_red, a_green)
     self.assertEqual(4, len(chunks))
@@ -99,6 +97,16 @@ class GroupIteratorMultipleTest(GroupIteratorTestBase):
 
 
 class BaseGroupTaskTest(BaseTest):
+
+  class JavaLibrary(Target):
+    pass
+
+  class PythonLibrary(Target):
+    pass
+
+  class ScalaLibrary(Target):
+    pass
+
   def create_targets(self):
     """Creates targets and returns the target roots for this GroupTask"""
 
@@ -108,19 +116,23 @@ class BaseGroupTaskTest(BaseTest):
 
     self.maxDiff = None
 
-    self._context = self.context(target_roots=self.create_targets())
-
-    self.populate_compile_classpath(self._context)
-
     self.recorded_actions = []
     # NB: GroupTask has a cache of tasks by name... use a distinct name
     self.group_task = GroupTask.named('jvm-compile-%s' % uuid.uuid4().hex,
                                       ['classes_by_target', 'classes_by_source'],
                                       ['test'])
-    self.group_task.add_member(self.group_member('javac', lambda t: t.is_java))
-    self.group_task.add_member(self.group_member('scalac', lambda t: t.is_scala))
 
+    javac = self.group_member(name='javac', selector=lambda t: isinstance(t, self.JavaLibrary))
+    self.group_task.add_member(javac)
+
+    scalac = self.group_member(name='scalac', selector=lambda t: isinstance(t, self.ScalaLibrary))
+    self.group_task.add_member(scalac)
+
+    self._context = self.context(target_roots=self.create_targets(),
+                                 for_task_types=[self.group_task])
+    self.populate_compile_classpath(self._context)
     self.group_task._prepare(self.options, round_manager=RoundManager(self._context))
+
 
     self.task = self.group_task(self._context, workdir='/not/real')
     self.task.execute()
@@ -189,13 +201,14 @@ class BaseGroupTaskTest(BaseTest):
 
 
 class GroupTaskTest(BaseGroupTaskTest):
+
   def create_targets(self):
-    self.a = self.make_target('src/java:a', JavaLibrary)
-    self.b = self.make_target('src/scala:b', ScalaLibrary, dependencies=[self.a])
-    self.c = self.make_target('src/java:c', JavaLibrary, dependencies=[self.b])
-    self.d = self.make_target('src/scala:d', ScalaLibrary, dependencies=[self.c])
-    self.e = self.make_target('src/java:e', JavaLibrary, dependencies=[self.d])
-    f = self.make_target('src/python:f', PythonLibrary)
+    self.a = self.make_target('src/java:a', self.JavaLibrary)
+    self.b = self.make_target('src/scala:b', self.ScalaLibrary, dependencies=[self.a])
+    self.c = self.make_target('src/java:c', self.JavaLibrary, dependencies=[self.b])
+    self.d = self.make_target('src/scala:d', self.ScalaLibrary, dependencies=[self.c])
+    self.e = self.make_target('src/java:e', self.JavaLibrary, dependencies=[self.d])
+    f = self.make_target('src/python:f', self.PythonLibrary)
     return [self.e, f]
 
   def test_groups(self):
@@ -273,10 +286,10 @@ class EmptyGroupTaskTest(BaseGroupTaskTest):
 
 class TransitiveGroupTaskTest(BaseGroupTaskTest):
   def create_targets(self):
-    self.a = self.make_target('src/scala:a', ScalaLibrary)
+    self.a = self.make_target('src/scala:a', self.ScalaLibrary)
     self.b = self.make_target('src/deps:b', Dependencies, dependencies=[self.a])
-    self.c = self.make_target('src/java:c', JavaLibrary, dependencies=[self.b])
-    self.d = self.make_target('src/scala:d', ScalaLibrary, dependencies=[self.c])
+    self.c = self.make_target('src/java:c', self.JavaLibrary, dependencies=[self.b])
+    self.d = self.make_target('src/scala:d', self.ScalaLibrary, dependencies=[self.c])
     return [self.d]
 
   def test_transitive_groups(self):

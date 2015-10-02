@@ -25,19 +25,13 @@ python_library(
   name = 'base_test',
   sources = ['base_test.py'],
   dependencies = [
-    'src/python/pants/backend/core/targets:common',
     'src/python/pants/base:address',
-    'src/python/pants/base:build_configuration',
     'src/python/pants/base:build_file',
-    'src/python/pants/base:build_file_address_mapper',
-    'src/python/pants/base:build_file_aliases',
-    'src/python/pants/base:build_file_parser',
-    'src/python/pants/base:build_graph',
     'src/python/pants/base:build_root',
     'src/python/pants/base:cmd_line_spec_parser',
     'src/python/pants/base:exceptions',
     'src/python/pants/base:source_root',
-    'src/python/pants/base:target',
+    'src/python/pants/build_graph',
     'src/python/pants/goal:goal',
     'src/python/pants/goal:products',
     'src/python/pants/subsystem',
@@ -66,7 +60,7 @@ python_tests(
   dependencies = [
     ':base_test',
     'src/python/pants/backend/maven_layout',
-    'src/python/pants/base:build_file_aliases',
+    'src/python/pants/build_graph',
   ]
 )
 

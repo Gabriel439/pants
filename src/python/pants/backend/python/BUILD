@@ -8,9 +8,9 @@ python_library(
     ':python_artifact',
     ':python_requirement',
     ':python_requirements',
-    'src/python/pants/base:build_file_aliases',
     'src/python/pants/backend/python/targets:python',
     'src/python/pants/backend/python/tasks:python',
+    'src/python/pants/build_graph',
     'src/python/pants/goal:task_registrar',
   ]
 )
@@ -95,14 +95,16 @@ python_library(
   name = 'python_chroot',
   sources = ['python_chroot.py'],
   dependencies = [
+    '3rdparty/python/twitter/commons:twitter.common.collections',
+    '3rdparty/python:pex',
     ':antlr_builder',
     ':python_requirement',
     ':thrift_builder',
-    '3rdparty/python:pex',
-    '3rdparty/python/twitter/commons:twitter.common.collections',
+    'src/python/pants/backend/codegen/targets:python',
+    'src/python/pants/backend/core/targets:common',
     'src/python/pants/backend/python/targets:python',
-    'src/python/pants/base:target',
-    'src/python/pants/base:build_invalidator',
+    'src/python/pants/base:build_environment',
+    'src/python/pants/invalidation',
     'src/python/pants/util:dirutil'
   ],
 )

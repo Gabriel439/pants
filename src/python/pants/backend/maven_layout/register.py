@@ -6,11 +6,11 @@ from __future__ import (absolute_import, division, generators, nested_scopes, pr
                         unicode_literals, with_statement)
 
 from pants.backend.maven_layout.maven_layout import maven_layout
-from pants.base.build_file_aliases import BuildFileAliases
+from pants.build_graph.build_file_aliases import BuildFileAliases
 
 
 def build_file_aliases():
-  return BuildFileAliases.create(
+  return BuildFileAliases(
     context_aware_object_factories={
       'maven_layout': BuildFileAliases.curry_context(maven_layout)
     }

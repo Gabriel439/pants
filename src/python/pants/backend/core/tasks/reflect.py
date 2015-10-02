@@ -17,7 +17,7 @@ from pants.base.build_environment import get_buildroot
 from pants.base.build_manual import get_builddict_info
 from pants.base.exceptions import TaskError
 from pants.base.generator import TemplateData
-from pants.base.target import Target
+from pants.build_graph.target import Target
 from pants.goal.goal import Goal
 from pants.help.help_info_extracter import HelpInfoExtracter
 from pants.option.arg_splitter import GLOBAL_SCOPE
@@ -35,7 +35,6 @@ buildroot = get_buildroot()
 
 
 # Our CLI help and doc-website-gen use this to get useful help text.
-
 def indent_docstring_by_n(s, n=1):
   """Given a non-empty docstring, return version indented N spaces.
   Given an empty thing, return the thing itself."""
@@ -327,6 +326,7 @@ def info_for_target_class(cls):
   paramdocs = param_docshards_to_template_datas(funcdoc_shards)
   return(argspec, funcdoc_rst, paramdocs)
 
+
 def entry_for_one_class(nom, cls):
   """  Generate a BUILD dictionary entry for a class.
   nom: name like 'python_binary'
@@ -420,7 +420,14 @@ def get_syms(build_file_parser):
         syms[sym] = item
 
   aliases = build_file_parser.registered_aliases()
-  map_symbols(aliases.targets)
+  map_symbols(aliases.target_types)
+
+  # TODO(John Sirois): Handle mapping the `Macro.expand` arguments - these are the real arguments
+  # to document and may be different than the set gathered from walking the Target hierarchy.
+  for alias, target_macro_factory in aliases.target_macro_factories.items():
+    for target_type in target_macro_factory.target_types:
+      map_symbols({alias: target_type})
+
   map_symbols(aliases.objects)
   map_symbols(aliases.context_aware_object_factories)
   return syms
@@ -454,9 +461,10 @@ def oref_template_data_from_help_info(oschi):
       hlp = indent_docstring_by_n(sub_buildroot(ohi.help), 6)
     option_l.append(TemplateData(
       st=st,
+      fromfile=ohi.fromfile,
       default=sub_buildroot(ohi.default),
       hlp=hlp,
-      typ=ohi.type.__name__))
+      typ=ohi.typ.__name__))
   return TemplateData(
     title=title,
     options=option_l,

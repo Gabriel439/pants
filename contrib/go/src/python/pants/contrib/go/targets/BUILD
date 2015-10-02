@@ -29,6 +29,8 @@ python_library(
   sources=['go_local_source.py'],
   dependencies=[
     ':go_target',
+    'src/python/pants/backend/core:wrapped_globs',
+    'src/python/pants/base:build_environment',
     'src/python/pants/base:payload',
   ],
 )
@@ -48,6 +50,6 @@ python_library(
   name='go_target',
   sources=['go_target.py'],
   dependencies=[
-    'src/python/pants/base:target'
+    'src/python/pants/build_graph'
   ]
 )

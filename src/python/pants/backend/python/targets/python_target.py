@@ -10,11 +10,12 @@ from twitter.common.collections import maybe_list
 
 from pants.backend.core.targets.resources import Resources
 from pants.backend.python.python_artifact import PythonArtifact
-from pants.base.address import SyntheticAddress
+from pants.base.address import Address
 from pants.base.exceptions import TargetDefinitionException
 from pants.base.payload import Payload
 from pants.base.payload_field import PrimitiveField
-from pants.base.target import Target
+from pants.build_graph.target import Target
+from pants.util.memo import memoized_property
 
 
 class PythonTarget(Target):
@@ -23,7 +24,6 @@ class PythonTarget(Target):
   def __init__(self,
                address=None,
                payload=None,
-               sources_rel_path=None,
                sources=None,
                resources=None,  # Old-style resources (file list, Fileset).
                resource_targets=None,  # New-style resources (Resources target specs).
@@ -53,11 +53,9 @@ class PythonTarget(Target):
       agnostic to interpreter class.
     """
     self.address = address
-    if sources_rel_path is None:
-      sources_rel_path = address.spec_path
     payload = payload or Payload()
     payload.add_fields({
-      'sources': self.create_sources_field(sources, sources_rel_path, address, key_arg='sources'),
+      'sources': self.create_sources_field(sources, address.spec_path, key_arg='sources'),
       'resources': self.create_sources_field(resources, address.spec_path, key_arg='resources'),
       'provides': provides,
       'compatibility': PrimitiveField(maybe_list(compatibility or ())),
@@ -67,8 +65,6 @@ class PythonTarget(Target):
                                        **kwargs)
     self._resource_target_specs = resource_targets
     self.add_labels('python')
-
-    self._synthetic_resources_target = None
 
     if provides and not isinstance(provides, PythonArtifact):
       raise TargetDefinitionException(self,
@@ -90,8 +86,18 @@ class PythonTarget(Target):
       yield spec
     if self._provides:
       for spec in self._provides._binaries.values():
-        address = SyntheticAddress.parse(spec, relative_to=self.address.spec_path)
+        address = Address.parse(spec, relative_to=self.address.spec_path)
         yield address.spec
+
+  @property
+  def traversable_dependency_specs(self):
+    for spec in super(PythonTarget, self).traversable_dependency_specs:
+      yield spec
+    if self._resource_target_specs:
+      for spec in self._resource_target_specs:
+        yield spec
+    if self._synthetic_resources_target:
+      yield self._synthetic_resources_target.address.spec
 
   @property
   def provides(self):
@@ -102,7 +108,7 @@ class PythonTarget(Target):
     def binary_iter():
       if self.payload.provides:
         for key, binary_spec in self.payload.provides.binaries.items():
-          address = SyntheticAddress.parse(binary_spec, relative_to=self.address.spec_path)
+          address = Address.parse(binary_spec, relative_to=self.address.spec_path)
           yield (key, self._build_graph.get_target(address))
     return dict(binary_iter())
 
@@ -116,16 +122,14 @@ class PythonTarget(Target):
 
     if self._resource_target_specs:
       def get_target(spec):
-        tgt = self._build_graph.get_target_from_spec(spec)
+        address = Address.parse(spec, relative_to=self.address.spec_path)
+        tgt = self._build_graph.get_target(address)
         if tgt is None:
-          raise TargetDefinitionException(self, 'No such resource target: {}'.format(spec))
+          raise TargetDefinitionException(self, 'No such resource target: {}'.format(address))
         return tgt
-      resource_targets.extend(map(get_target, self._resource_target_specs))
+      resource_targets.extend(get_target(spec) for spec in self._resource_target_specs)
 
-    if self.payload.resources.source_paths:
-      if not self._synthetic_resources_target:
-        # This must happen lazily: we don't have enough context in __init__() to do this there.
-        self._synthetic_resources_target = self._synthesize_resources_target()
+    if self._synthetic_resources_target:
       resource_targets.append(self._synthetic_resources_target)
 
     return resource_targets
@@ -135,16 +139,20 @@ class PythonTarget(Target):
     for binary in self.provided_binaries.values():
       binary.walk(work, predicate)
 
-  def _synthesize_resources_target(self):
+  @memoized_property
+  def _synthetic_resources_target(self):
+    if not self.payload.resources.source_paths:
+      return None
+
     # Create an address for the synthetic target.
     spec = self.address.spec + '_synthetic_resources'
-    synthetic_address = SyntheticAddress.parse(spec=spec)
+    resource_address = Address.parse(spec=spec)
     # For safety, ensure an address that's not used already, even though that's highly unlikely.
-    while self._build_graph.contains_address(synthetic_address):
+    while self._build_graph.contains_address(resource_address):
       spec += '_'
-      synthetic_address = SyntheticAddress.parse(spec=spec)
+      resource_address = Address.parse(spec=spec)
 
-    self._build_graph.inject_synthetic_target(synthetic_address, Resources,
+    self._build_graph.inject_synthetic_target(resource_address, Resources,
                                               sources=self.payload.resources.source_paths,
                                               derived_from=self)
-    return self._build_graph.get_target(synthetic_address)
+    return self._build_graph.get_target(resource_address)

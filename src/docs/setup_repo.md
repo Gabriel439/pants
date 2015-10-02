@@ -12,8 +12,8 @@ Configuring with `pants.ini`
 ----------------------------
 
 Pants Build is very configurable. Your source tree's top-level directory
-should contain a `pants.ini` file that sets many, many options. You can
-modify a broad range of settings here, including specific binaries to
+should contain a `pants.ini` file that sets various options. You can
+modify a broad range of options here, including specific binaries to
 use in your toolchain, arguments to pass to tools, etc.
 
 These files are formatted as [Python config
@@ -46,23 +46,25 @@ several contexts, as in these excerpts that define/use `thrift_workdir`:
 It's also handy for defining values that are used in several contexts,
 since these values will be available in all those contexts. The code
 that combines DEFAULT values with others is in Pants'
-[base/config.py](https://github.com/pantsbuild/pants/blob/master/src/python/pants/base/config.py).
+[option/config.py](https://github.com/pantsbuild/pants/blob/master/src/python/pants/option/config.py).
 
 Configure Pants' own Runtime Dependencies
 -----------------------------------------
 
-Pants calls out to other tools. E.g., it uses `jmake` for part of Java compilation.
-Some special files in your workspace specify versions of these to fetch.
-When setting up your Pants repo, you want to copy these files over from a working Pants
-repo and perhaps change some version numbers to fit your situation.
-
-**JVM** `BUILD.tools` has JVM dependencies. For example, when Pants fetches `jmake`, it looks in
+Pants calls out to other tools. E.g., it optionally uses `scalastyle` to check scala source code.
+Most tools come pre-configured by Pants. A few do require more setup though and these rely on
+special targets in your workspace to specify versions of the tools to fetch. These targets all live
+in the `BUILD.tools` file by convention. For example, when Pants fetches `scalastyle`, it looks in
 `BUILD.tools` for that target:
 
-!inc[start-at=jmake&end-before=java](../../BUILD.tools)
+!inc[start-at=scalastyle&end-before=scrooge-gen](../../BUILD.tools)
 
-**Python** `build-support/python/pants.requirements.txt` has Pants' runtime Python requirements,
-expressed as a `requirements.txt` file.
+When setting up your Pants repo, you may want to copy this file over from a working Pants repo and
+perhaps change some version numbers to fit your situation.
+
+**Note**: pants ships expecting a specific main class and command line interface for all jvm tools
+it uses; so, if the version you specify does not match either of those expectations, pants will
+fail when it tries to call the tool.
 
 Configure Code Layout with `source_root`, `maven_layout`
 --------------------------------------------------------
@@ -250,13 +252,11 @@ defined in your plugin:
       'public': {  # must match the name of the `Repository` object that you defined in your plugin.
         'resolver': 'maven.example.com', # must match hostname in ~/.netrc and the <url> parameter
                                          # in your custom ivysettings.xml.
-        'confs': ['default', 'sources', 'docs', 'changelog'],
         'auth': 'build-support:netrc',   # Pants spec to a 'credentials()' object.
         'help': 'Configure your ~/.netrc for maven.example.com access.'
       },
       'testing': {
         'resolver': 'artifactory.example.com',
-        'confs': ['default', 'sources', 'docs', 'changelog'],
         'auth': 'build-support:netrc',
         'help': 'Configure your ~/.netrc for artifactory.example.com access.'
       },

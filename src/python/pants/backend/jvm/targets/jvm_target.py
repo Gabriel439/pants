@@ -5,14 +5,16 @@
 from __future__ import (absolute_import, division, generators, nested_scopes, print_function,
                         unicode_literals, with_statement)
 
+from twitter.common.collections import OrderedSet
+
 from pants.backend.core.targets.resources import Resources
 from pants.backend.jvm.subsystems.jvm_platform import JvmPlatform
 from pants.backend.jvm.targets.exclude import Exclude
 from pants.backend.jvm.targets.jar_library import JarLibrary
 from pants.backend.jvm.targets.jarable import Jarable
 from pants.base.payload import Payload
-from pants.base.payload_field import ConfigurationsField, ExcludesField, PrimitiveField
-from pants.base.target import Target
+from pants.base.payload_field import ExcludesField, PrimitiveField
+from pants.build_graph.target import Target
 from pants.util.memo import memoized_property
 
 
@@ -26,20 +28,15 @@ class JvmTarget(Target, Jarable):
   def __init__(self,
                address=None,
                payload=None,
-               sources_rel_path=None,
                sources=None,
                provides=None,
                excludes=None,
                resources=None,
-               configurations=None,
                no_cache=False,
                services=None,
                platform=None,
                **kwargs):
     """
-    :param configurations: One or more ivy configurations to resolve for this target.
-      This parameter is not intended for general use.
-    :type configurations: tuple of strings
     :param excludes: List of `exclude <#exclude>`_\s to filter this target's
       transitive dependencies against.
     :param sources: Source code files to build. Paths are relative to the BUILD
@@ -59,14 +56,12 @@ class JvmTarget(Target, Jarable):
       by DistributionLocator.cached().version.
     """
     self.address = address  # Set in case a TargetDefinitionException is thrown early
-    if sources_rel_path is None:
-      sources_rel_path = address.spec_path
     payload = payload or Payload()
+    excludes = ExcludesField(self.assert_list(excludes, expected_type=Exclude, key_arg='excludes'))
     payload.add_fields({
-      'sources': self.create_sources_field(sources, sources_rel_path, address, key_arg='sources'),
+      'sources': self.create_sources_field(sources, address.spec_path, key_arg='sources'),
       'provides': provides,
-      'excludes': ExcludesField(self.assert_list(excludes, expected_type=Exclude, key_arg='excludes')),
-      'configurations': ConfigurationsField(self.assert_list(configurations, key_arg='configurations')),
+      'excludes': excludes,
       'platform': PrimitiveField(platform),
     })
     self._resource_specs = self.assert_list(resources, key_arg='resources')
@@ -84,17 +79,22 @@ class JvmTarget(Target, Jarable):
 
   @property
   def platform(self):
+    """Platform associated with this target.
+
+    :return: The jvm platform object.
+    :rtype: JvmPlatformSettings
+    """
     return JvmPlatform.global_instance().get_platform_for_target(self)
 
   @memoized_property
   def jar_dependencies(self):
-    return set(self.get_jar_dependencies())
+    return OrderedSet(self.get_jar_dependencies())
 
   def mark_extra_invalidation_hash_dirty(self):
     del self.jar_dependencies
 
   def get_jar_dependencies(self):
-    jar_deps = set()
+    jar_deps = OrderedSet()
 
     def collect_jar_deps(target):
       if isinstance(target, JarLibrary):

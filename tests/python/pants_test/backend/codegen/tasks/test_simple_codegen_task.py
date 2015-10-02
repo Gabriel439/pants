@@ -13,8 +13,8 @@ from pants.backend.codegen.tasks.simple_codegen_task import SimpleCodegenTask
 from pants.backend.core.register import build_file_aliases as register_core
 from pants.backend.jvm.targets.java_library import JavaLibrary
 from pants.backend.jvm.targets.jvm_target import JvmTarget
-from pants.base.build_file_aliases import BuildFileAliases
 from pants.base.exceptions import TaskError
+from pants.build_graph.build_file_aliases import BuildFileAliases
 from pants_test.tasks.task_test_base import TaskTestBase
 
 
@@ -26,7 +26,7 @@ class SimpleCodegenTaskTest(TaskTestBase):
 
   @property
   def alias_groups(self):
-    return register_core().merge(register_codegen()).merge(BuildFileAliases.create({
+    return register_core().merge(register_codegen()).merge(BuildFileAliases({
       'dummy_library': SimpleCodegenTaskTest.DummyLibrary
     }))
 
@@ -332,8 +332,7 @@ class SimpleCodegenTaskTest(TaskTestBase):
                             'strategy=isolated.')
       return super(SimpleCodegenTaskTest.DummyGen, self)._find_sources_generated_by_target(target)
 
-    @property
-    def synthetic_target_type(self):
+    def synthetic_target_type(self, target):
       return JavaLibrary
 
     class DummyGlobalStrategy(SimpleCodegenTask.GlobalCodegenStrategy):

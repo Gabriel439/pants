@@ -7,9 +7,9 @@ from __future__ import (absolute_import, division, generators, nested_scopes, pr
 
 from pants.backend.core.wrapped_globs import Globs
 from pants.backend.jvm.targets.java_library import JavaLibrary
-from pants.base.build_file_aliases import BuildFileAliases
 from pants.base.payload import Payload, PayloadFieldAlreadyDefinedError, PayloadFrozenError
 from pants.base.payload_field import PrimitiveField
+from pants.build_graph.build_file_aliases import BuildFileAliases
 from pants_test.base_test import BaseTest
 
 
@@ -17,12 +17,12 @@ class PayloadTest(BaseTest):
 
   @property
   def alias_groups(self):
-    return BuildFileAliases.create(
+    return BuildFileAliases(
       targets={
         'java_library': JavaLibrary,
       },
       context_aware_object_factories={
-        'globs': Globs,
+        'globs': Globs.factory,
       },
     )
 

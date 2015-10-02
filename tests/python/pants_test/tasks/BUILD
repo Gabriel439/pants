@@ -9,7 +9,7 @@ python_library(
     'src/python/pants/backend/core/tasks:console_task',
     'src/python/pants/backend/core/tasks:task',
     'src/python/pants/base:exceptions',
-    'src/python/pants/base:target',
+    'src/python/pants/build_graph',
     'src/python/pants/goal:context',
     'src/python/pants/goal',
     'src/python/pants/ivy',
@@ -22,13 +22,10 @@ target(
   name = 'tasks',
   dependencies = [
     ':builddict',
-    ':cache_manager',
     ':check_published_deps',
     ':console_task',
-    ':dependees',
     ':detect_duplicates',
     ':execution_graph',
-    ':filter',
     ':group_task',
     ':jar_create',
     ':jar_publish',
@@ -36,6 +33,7 @@ target(
     ':jvm_task',
     ':jvmdoc_gen',
     ':list_goals',
+    ':list_owners',
     ':listtargets',
     ':minimal_cover',
     ':reflect',
@@ -57,6 +55,7 @@ target(
     ':jvm_bundle_integration',
     ':jvm_run_integration',
     ':protobuf_integration',
+    ':scalastyle_integration',
   ],
 )
 
@@ -153,17 +152,6 @@ python_tests(
 )
 
 python_tests(
-  name = 'cache_manager',
-  sources = ['test_cache_manager.py'],
-  dependencies = [
-    ':task_test_base',
-    'tests/python/pants_test/testutils',
-    'src/python/pants/base:build_invalidator',
-    'src/python/pants/base:cache_manager',
-  ]
-)
-
-python_tests(
   name = 'check_published_deps',
   sources = ['test_check_published_deps.py'],
   dependencies = [
@@ -174,7 +162,7 @@ python_tests(
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/jvm/tasks:check_published_deps',
-    'src/python/pants/base:build_file_aliases',
+    'src/python/pants/build_graph',
   ]
 )
 
@@ -184,22 +172,6 @@ python_tests(
   dependencies = [
     ':task_test_base',
     'src/python/pants/backend/core/tasks:console_task',
-  ]
-)
-
-python_tests(
-  name = 'dependees',
-  sources = ['test_dependees.py'],
-  dependencies = [
-    ':task_test_base',
-    'src/python/pants/backend/codegen/targets:java',
-    'src/python/pants/backend/core/targets:common',
-    'src/python/pants/backend/core/tasks:dependees',
-    'src/python/pants/backend/jvm/targets:java',
-    'src/python/pants/backend/jvm/targets:scala',
-    'src/python/pants/backend/python/targets:python',
-    'src/python/pants/base:build_environment',
-    'src/python/pants/base:build_file_aliases',
   ]
 )
 
@@ -231,20 +203,7 @@ python_tests(
     'src/python/pants/backend/core/tasks:filemap',
     'src/python/pants/base:source_root',
     'src/python/pants/backend/python/targets:python',
-    'src/python/pants/base:build_file_aliases',
-  ],
-)
-
-python_tests(
-  name = 'filter',
-  sources = ['test_filter.py'],
-  dependencies = [
-    ':task_test_base',
-    'src/python/pants/backend/jvm/targets:java',
-    'src/python/pants/backend/python/targets:python',
-    'src/python/pants/backend/core/tasks:filter',
-    'src/python/pants/backend/core/targets:common',
-    'src/python/pants/base:build_file_aliases',
+    'src/python/pants/build_graph',
   ],
 )
 
@@ -270,8 +229,8 @@ python_tests(
     'src/python/pants/backend/jvm/targets:scala',
     'src/python/pants/backend/jvm/tasks:jar_create',
     'src/python/pants/base:build_environment',
-    'src/python/pants/base:build_file_aliases',
     'src/python/pants/base:source_root',
+    'src/python/pants/build_graph',
     'src/python/pants/java/jar:manifest',
     'src/python/pants/util:contextutil',
     'src/python/pants/util:dirutil',
@@ -289,9 +248,9 @@ python_tests(
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/jvm/tasks:jar_publish',
-    'src/python/pants/base:build_file_aliases',
     'src/python/pants/base:generator',
     'src/python/pants/base:source_root',
+    'src/python/pants/build_graph',
     'src/python/pants/scm:scm',
     'src/python/pants/util:contextutil',
     'src/python/pants/util:dirutil',
@@ -331,8 +290,7 @@ python_tests(
     'src/python/pants/backend/jvm:artifact',
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/targets:jvm',
-    'src/python/pants/base:build_file_aliases',
-    'src/python/pants/base:target',
+    'src/python/pants/build_graph',
   ],
 )
 
@@ -343,7 +301,7 @@ python_tests(
     ':task_test_base',
     'src/python/pants/backend/core/tasks:minimal_cover',
     'src/python/pants/backend/python/targets:python',
-    'src/python/pants/base:build_file_aliases',
+    'src/python/pants/build_graph',
   ],
 )
 
@@ -360,10 +318,10 @@ python_tests(
   sources = ['test_roots.py'],
   dependencies = [
     ':task_test_base',
-    'src/python/pants/base:build_environment',
-    'src/python/pants/base:target',
     'src/python/pants/backend/core/targets:common',
     'src/python/pants/backend/core/tasks:roots',
+    'src/python/pants/base:build_environment',
+    'src/python/pants/build_graph',
   ],
 )
 
@@ -374,7 +332,7 @@ python_tests(
     ':task_test_base',
     'src/python/pants/backend/python/targets:python',
     'src/python/pants/backend/core/tasks:sorttargets',
-    'src/python/pants/base:build_file_aliases',
+    'src/python/pants/build_graph',
   ],
 )
 
@@ -383,10 +341,10 @@ python_tests(
   sources = ['test_targets_help.py'],
   dependencies = [
     ':task_test_base',
-    'src/python/pants/base:build_environment',
-    'src/python/pants/base:target',
     'src/python/pants/backend/core/targets:common',
     'src/python/pants/backend/core/tasks:targets_help',
+    'src/python/pants/base:build_environment',
+    'src/python/pants/build_graph',
   ],
 )
 
@@ -402,9 +360,20 @@ python_tests(
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/python/targets:python',
-    'src/python/pants/base:build_file_aliases',
     'src/python/pants/base:source_root',
-    'src/python/pants/base:target',
+    'src/python/pants/build_graph',
+  ],
+)
+
+python_tests(
+  name = 'list_owners',
+  sources = ['test_list_owners.py'],
+  dependencies = [
+    ':console_task',
+    'src/python/pants/backend/core/tasks:list_owners',
+    'src/python/pants/backend/python/targets:python',
+    'src/python/pants/base:exceptions',
+    'src/python/pants/build_graph',
   ],
 )
 
@@ -417,8 +386,8 @@ python_tests(
     'src/python/pants/backend/jvm/targets:java',
     'src/python/pants/backend/jvm/targets:jvm',
     'src/python/pants/backend/jvm/tasks:jar_task',
-    'src/python/pants/base:build_file_aliases',
     'src/python/pants/base:source_root',
+    'src/python/pants/build_graph',
     'src/python/pants/util:contextutil',
     'src/python/pants/util:dirutil',
     'tests/python/pants_test/jvm:jvm_tool_task_test_base',
@@ -429,12 +398,10 @@ python_tests(
   name = 'group_task',
   sources = ['test_group_task.py'],
   dependencies = [
+    'src/python/pants/backend/core/targets:common',
     'src/python/pants/backend/core/tasks:group_task',
-    'src/python/pants/backend/jvm/targets:java',
-    'src/python/pants/backend/jvm/targets:scala',
-    'src/python/pants/backend/python/targets:python',
-    'src/python/pants/base:target',
-    'src/python/pants/engine:engine',
+    'src/python/pants/build_graph',
+    'src/python/pants/engine',
     'tests/python/pants_test:base_test',
   ]
 )

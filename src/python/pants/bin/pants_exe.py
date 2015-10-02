@@ -5,16 +5,23 @@
 from __future__ import (absolute_import, division, generators, nested_scopes, print_function,
                         unicode_literals, with_statement)
 
-import logging
 import os
 import sys
 import traceback
 import warnings
 
-from pants.base.build_environment import get_buildroot
-from pants.bin.goal_runner import GoalRunner
-from pants.bin.plugin_resolver import PluginResolver
-from pants.option.options_bootstrapper import OptionsBootstrapper
+from colors import green
+
+
+# We want to present warnings to the user, set this up before importing any of our own code,
+# to ensure all deprecation warnings are seen, including module deprecations.
+# The "default" action displays a warning for a particular file and line number exactly once.
+# See https://docs.python.org/2/library/warnings.html#the-warnings-filter for the complete list.
+warnings.simplefilter('default', DeprecationWarning)
+
+from pants.base.build_environment import get_buildroot  # isort:skip
+from pants.bin.goal_runner import GoalRunner, OptionsInitializer, ReportingInitializer  # isort:skip
+from pants.bin.repro import Reproducer  # isort:skip
 
 
 class _Exiter(object):
@@ -42,7 +49,7 @@ class _Exiter(object):
   def unhandled_exception_hook(self, exception_class, exception, tb):
     msg = ''
     if self._is_print_backtrace:
-      msg = '\nException caught:\n' + ''.join(self._format_tb(tb))
+      msg = '\nException caught: ({})\n{}'.format(type(exception), ''.join(self._format_tb(tb)))
     if str(exception):
       msg += '\nException message: {}\n'.format(exception)
     else:
@@ -50,44 +57,67 @@ class _Exiter(object):
     # TODO(Jin Feng) Always output the unhandled exception details into a log file.
     self.exit_and_fail(msg)
 
+  def set_except_hook(self):
+    # Call the registration of the unhandled exception hook as early as possible in the code.
+    sys.excepthook = self.unhandled_exception_hook
+
 
 def _run(exiter):
-  # Place the registration of the unhandled exception hook as early as possible in the code.
-  sys.excepthook = exiter.unhandled_exception_hook
+  # Bootstrap options and logging.
+  options, build_config = OptionsInitializer().setup()
 
-  # We want to present warnings to the user, set this up early to ensure all warnings are seen.
-  # The "default" action displays a warning for a particular file and line number exactly once.
-  # See https://docs.python.org/2/library/warnings.html#the-warnings-filter for the complete action
-  # list.
-  warnings.simplefilter("default")
+  # Apply exiter options.
+  exiter.apply_options(options)
 
-  # The GoalRunner will setup final logging below in `.setup()`, but span the gap until then.
-  logging.basicConfig(level=logging.INFO)
-  # This routes the warnings we enabled above through our loggers instead of straight to stderr raw.
-  logging.captureWarnings(True)
+  # Launch RunTracker as early as possible (just after Subsystem options are initialized).
+  run_tracker, reporting = ReportingInitializer().setup()
 
+  # Determine the build root dir.
   root_dir = get_buildroot()
-  if not os.path.exists(root_dir):
-    exiter.exit_and_fail('PANTS_BUILD_ROOT does not point to a valid path: {}'.format(root_dir))
 
-  options_bootstrapper = OptionsBootstrapper()
+  # Capture a repro of the 'before' state for this build, if needed.
+  repro = Reproducer.global_instance().create_repro()
+  if repro:
+    repro.capture(run_tracker.run_info.get_as_dict())
 
-  plugin_resolver = PluginResolver(options_bootstrapper)
-  working_set = plugin_resolver.resolve()
+  # Set up and run GoalRunner.
+  def run():
+    goal_runner = GoalRunner.Factory(root_dir, options, build_config,
+                                     run_tracker, reporting).setup()
+    return goal_runner.run()
 
-  goal_runner = GoalRunner(root_dir)
-  goal_runner.setup(options_bootstrapper, working_set)
-  exiter.apply_options(goal_runner.options)
-  result = goal_runner.run()
+  # Run with profiling, if requested.
+  profile_path = os.environ.get('PANTS_PROFILE')
+  if profile_path:
+    import cProfile
+    profiler = cProfile.Profile()
+    try:
+      result = profiler.runcall(run)
+    finally:
+      profiler.dump_stats(profile_path)
+      print('Dumped profile data to {}'.format(profile_path))
+      view_cmd = green('gprof2dot -f pstats {path} | dot -Tpng -o {path}.png && '
+                       'open {path}.png'.format(path=profile_path))
+      print('Use, e.g., {} to render and view.'.format(view_cmd))
+  else:
+    result = run()
+
+  if repro:
+    # TODO: Have Repro capture the 'after' state (as a diff) as well?
+    repro.log_location_of_repro_file()
+
   exiter.do_exit(result)
 
 
 def main():
   exiter = _Exiter()
+  exiter.set_except_hook()
+
   try:
     _run(exiter)
   except KeyboardInterrupt:
     exiter.exit_and_fail('Interrupted by user.')
+
 
 if __name__ == '__main__':
   main()

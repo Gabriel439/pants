@@ -22,6 +22,7 @@ class ResourcesTask(Task):
   This base assumes that resources targets or targets that generate resources are independent from
   each other and can be processed in isolation in any order.
   """
+
   @classmethod
   def product_types(cls):
     return ['resources_by_target']
@@ -97,7 +98,7 @@ class ResourcesTask(Task):
     """Prepares the resources associated with `target` in the given `chroot`.
 
     :param target: The target to prepare resource files for.
-    :type target: :class:`pants.base.target.Target`
+    :type target: :class:`pants.build_graph.target.Target`
     :param string chroot: An existing, clean chroot dir to generate `target`'s resources to.
     """
 
@@ -109,7 +110,7 @@ class ResourcesTask(Task):
     efficient way to enumerate the resource files than a filesystem walk of the chroot.
 
     :param target: The target to calculate relative resource paths for.
-    :type target: :class:`pants.base.target.Target`
+    :type target: :class:`pants.build_graph.target.Target`
     :param string chroot: The chroot path that `target`'s resources have been generated to.
     :returns: A list of relative paths.
     """

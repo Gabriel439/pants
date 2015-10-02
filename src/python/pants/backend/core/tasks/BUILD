@@ -13,16 +13,20 @@ target(
     ':console_task',
     ':deferred_sources_mapper',
     ':dependees',
+    ':explain_options',
     ':filemap',
     ':filter',
     ':group_task',
     ':list_goals',
+    ':list_owners',
     ':listtargets',
     ':markdown_to_html',
     ':minimal_cover',
+    ':mutex_task_mixin',
     ':noop',
     ':pathdeps',
     ':paths',
+    ':repl_task_mixin',
     ':reporting_server',
     ':roots',
     ':run_prep_command',
@@ -45,7 +49,9 @@ target(
 python_library(
   name = 'bash_completion',
   sources = ['bash_completion.py'],
-  resources = globs('templates/bash_completion/*.mustache'),
+  resource_targets = [
+    ':bash_completion_resources',
+  ],
   dependencies = [
     ':console_task',
     ':task',
@@ -54,13 +60,20 @@ python_library(
     'src/python/pants/goal',
     'src/python/pants/help',
     'src/python/pants/option',
-    ],
-  )
+  ],
+)
+
+resources(
+  name = 'bash_completion_resources',
+  sources = globs('templates/bash_completion/*.mustache'),
+)
 
 python_library(
   name = 'builddictionary',
   sources = ['builddictionary.py'],
-  resources = globs('templates/builddictionary/*.mustache'),
+  resource_targets = [
+    ':builddictionary_resources',
+  ],
   dependencies = [
     ':common',
     ':reflect',
@@ -71,15 +84,20 @@ python_library(
     'src/python/pants/backend/maven_layout',
     'src/python/pants/backend/python:python_requirements',
     'src/python/pants/base:build_environment',
-    'src/python/pants/base:build_file_parser',
     'src/python/pants/base:build_manual',
     'src/python/pants/base:exceptions',
     'src/python/pants/base:generator',
-    'src/python/pants/base:target',
+    'src/python/pants/build_graph',
     'src/python/pants/goal',
     'src/python/pants/util:dirutil',
   ],
 )
+
+resources(
+  name = 'builddictionary_resources',
+  sources = globs('templates/builddictionary/*.mustache'),
+)
+
 
 python_library(
   name = 'clean',
@@ -127,10 +145,21 @@ python_library(
   dependencies = [
     ':common',
     ':console_task',
+    ':target_filter_task_mixin',
     '3rdparty/python/twitter/commons:twitter.common.collections',
-    'src/python/pants/base:build_environment',
-    'src/python/pants/base:target',
     'src/python/pants/backend/core/targets:common',
+    'src/python/pants/base:build_environment',
+    'src/python/pants/build_graph',
+  ],
+)
+
+python_library(
+  name = 'explain_options',
+  sources = ['explain_options_task.py'],
+  dependencies = [
+    '3rdparty/python:ansicolors',
+    ':console_task',
+    'src/python/pants/option',
   ],
 )
 
@@ -146,12 +175,12 @@ python_library(
   name = 'filter',
   sources = ['filter.py'],
   dependencies = [
-    ':common',
     ':console_task',
-    'src/python/pants/base:address',
+    ':target_filter_task_mixin',
+    'src/python/pants/base:address_lookup_error',
     'src/python/pants/base:build_environment',
     'src/python/pants/base:cmd_line_spec_parser',
-    'src/python/pants/base:target',
+    'src/python/pants/base:exceptions',
     'src/python/pants/util:filtering',
   ],
 )
@@ -162,8 +191,8 @@ python_library(
   dependencies = [
     '3rdparty/python:six',
     ':task',
-    'src/python/pants/base:build_graph',
     'src/python/pants/base:workunit',
+    'src/python/pants/build_graph',
     'src/python/pants/goal',
     'src/python/pants/option',
   ],
@@ -190,7 +219,9 @@ python_library(
 python_library(
   name = 'markdown_to_html',
   sources = ['markdown_to_html.py'],
-  resources = globs('templates/markdown/*.mustache'),
+  resource_targets = [
+    ':markdown_to_html_resources',
+  ],
   dependencies = [
     '3rdparty/python:Markdown',
     '3rdparty/python:Pygments',
@@ -208,12 +239,26 @@ python_library(
   ],
 )
 
+resources(
+  name = 'markdown_to_html_resources',
+  sources = globs('templates/markdown/*.mustache'),
+)
+
 python_library(
   name = 'minimal_cover',
   sources = ['minimal_cover.py'],
   dependencies = [
     ':console_task',
   ],
+)
+
+python_library(
+  name = 'mutex_task_mixin',
+  sources = ['mutex_task_mixin.py'],
+  dependencies = [
+    ':task',
+    'src/python/pants/base:exceptions',
+  ]
 )
 
 python_library(
@@ -238,7 +283,18 @@ python_library(
   dependencies = [
     ':console_task',
     'src/python/pants/base:exceptions',
+    'src/python/pants/util:strutil',
   ],
+)
+
+python_library(
+  name = 'repl_task_mixin',
+  sources = ['repl_task_mixin.py'],
+  dependencies = [
+    ':mutex_task_mixin',
+    'src/python/pants/base:workunit',
+    'src/python/pants/console:stty_utils',
+  ]
 )
 
 python_library(
@@ -262,8 +318,8 @@ python_library(
     'src/python/pants/base:build_environment',
     'src/python/pants/base:build_manual',
     'src/python/pants/base:generator',
-    'src/python/pants/base:target',
-    'src/python/pants/goal:goal',
+    'src/python/pants/build_graph',
+    'src/python/pants/goal',
     'src/python/pants/help',
     'src/python/pants/option',
   ],
@@ -305,14 +361,25 @@ python_library(
     ':common',
     ':console_task',
     '3rdparty/python/twitter/commons:twitter.common.util',
-    'src/python/pants/base:target',
+    'src/python/pants/build_graph',
   ],
+)
+
+python_library(
+  name = 'target_filter_task_mixin',
+  sources = ['target_filter_task_mixin.py'],
+  dependencies = [
+    'src/python/pants/backend/core/tasks:task',
+    'src/python/pants/base:exceptions',
+  ]
 )
 
 python_library(
   name = 'targets_help',
   sources = ['targets_help.py'],
-  resources = globs('templates/targets_help/*.mustache'),
+  resource_targets = [
+    ':targets_help_resources',
+  ],
   dependencies = [
     ':builddictionary',
     ':common',
@@ -321,23 +388,36 @@ python_library(
   ],
 )
 
+resources(
+  name = 'targets_help_resources',
+  sources = globs('templates/targets_help/*.mustache'),
+)
+
 python_library(
   name = 'task',
   sources = ['task.py'],
   dependencies = [
     '3rdparty/python/twitter/commons:twitter.common.collections',
-    'src/python/pants/base:build_invalidator',
-    'src/python/pants/base:cache_manager',
     'src/python/pants/base:exceptions',
     'src/python/pants/base:hash_utils',
     'src/python/pants/base:worker_pool',
     'src/python/pants/base:workunit',
     'src/python/pants/cache',
+    'src/python/pants/invalidation',
     'src/python/pants/ivy',
     'src/python/pants/java:executor',
     'src/python/pants/reporting',
     'src/python/pants/subsystem',
     'src/python/pants/util:meta',
+  ],
+)
+
+python_library(
+  name = 'list_owners',
+  sources = ['list_owners.py'],
+  dependencies = [
+    ':console_task',
+    'src/python/pants/build_graph',
   ],
 )
 
@@ -348,7 +428,7 @@ python_library(
     ':console_task',
     'src/python/pants/base:build_environment',
     'src/python/pants/base:exceptions',
-    'src/python/pants/base:source_mapper',
+    'src/python/pants/build_graph',
     'src/python/pants/goal:workspace',
   ],
 )
