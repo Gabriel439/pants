@@ -2,10 +2,15 @@
 # Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
+from __future__ import (absolute_import, division, generators, nested_scopes, print_function,
+                        unicode_literals, with_statement)
+
 from pants.contrib.haskell.tasks.stack_task import StackTask
+
 
 class StackBuild(StackTask):
   """Build the given Haskell target"""
+
   @classmethod
   def register_options(cls, register):
     super(StackBuild, cls).register_options(register)

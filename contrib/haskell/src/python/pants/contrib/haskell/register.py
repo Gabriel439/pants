@@ -2,21 +2,26 @@
 # Copyright 2015 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-from pants.base.build_file_aliases             import BuildFileAliases
-from pants.contrib.haskell.tasks.stack_bench   import StackBench
-from pants.contrib.haskell.tasks.stack_build   import StackBuild
-from pants.contrib.haskell.tasks.stack_ghci    import StackGhci
+from __future__ import (absolute_import, division, generators, nested_scopes, print_function,
+                        unicode_literals, with_statement)
+
+from pants.base.build_file_aliases import BuildFileAliases
+from pants.goal.task_registrar import TaskRegistrar
+
+from pants.contrib.haskell.targets.cabal import Cabal
+from pants.contrib.haskell.targets.hackage import Hackage
+from pants.contrib.haskell.targets.stackage import Stackage
+from pants.contrib.haskell.tasks.stack_bench import StackBench
+from pants.contrib.haskell.tasks.stack_build import StackBuild
+from pants.contrib.haskell.tasks.stack_ghci import StackGhci
 from pants.contrib.haskell.tasks.stack_haddock import StackHaddock
 from pants.contrib.haskell.tasks.stack_install import StackInstall
-from pants.contrib.haskell.tasks.stack_run     import StackRun
-from pants.contrib.haskell.tasks.stack_test    import StackTest
-from pants.contrib.haskell.targets.hackage     import Hackage
-from pants.contrib.haskell.targets.cabal       import Cabal
-from pants.contrib.haskell.targets.stackage    import Stackage
-from pants.goal.task_registrar                 import TaskRegistrar
+from pants.contrib.haskell.tasks.stack_run import StackRun
+from pants.contrib.haskell.tasks.stack_test import StackTest
+
 
 def build_file_aliases():
-  return BuildFileAliases.create(
+  return BuildFileAliases(
     targets ={
       'hackage' : Hackage,
       'cabal'   : Cabal,
