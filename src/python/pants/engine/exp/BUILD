@@ -6,6 +6,7 @@ python_library(
   sources=['addressable.py'],
   dependencies=[
     '3rdparty/python:six',
+    ':objects',
     'src/python/pants/util:meta',
   ]
 )
@@ -27,8 +28,7 @@ python_library(
     ':addressable',
     ':mapper',
     ':objects',
-    'src/python/pants/base:address',
-    'src/python/pants/util:memo',
+    'src/python/pants/build_graph',
   ]
 )
 
@@ -38,7 +38,7 @@ python_library(
   dependencies=[
     ':objects',
     ':parsers',
-    'src/python/pants/base:address',
+    'src/python/pants/build_graph',
     'src/python/pants/util:memo',
   ]
 )

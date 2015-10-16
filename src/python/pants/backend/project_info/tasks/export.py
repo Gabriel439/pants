@@ -22,21 +22,25 @@ from pants.backend.jvm.targets.jar_library import JarLibrary
 from pants.backend.jvm.targets.jvm_app import JvmApp
 from pants.backend.jvm.targets.jvm_target import JvmTarget
 from pants.backend.jvm.targets.scala_library import ScalaLibrary
+from pants.backend.jvm.tasks.classpath_products import ClasspathProducts
+from pants.backend.jvm.tasks.ivy_task_mixin import IvyTaskMixin
 from pants.backend.python.targets.python_requirement_library import PythonRequirementLibrary
 from pants.backend.python.targets.python_target import PythonTarget
 from pants.backend.python.tasks.python_task import PythonTask
 from pants.base.build_environment import get_buildroot
 from pants.base.exceptions import TaskError
 from pants.java.distribution.distribution import DistributionLocator
+from pants.java.executor import SubprocessExecutor
 from pants.util.memo import memoized_property
 
 
 # Changing the behavior of this task may affect the IntelliJ Pants plugin.
 # Please add fkorotkov, tdesai to reviews for this file.
-class Export(PythonTask, ConsoleTask):
-  """Generates a JSON description of the targets as configured in pants.
+class ExportTask(IvyTaskMixin, PythonTask):
+  """Base class for generating a json-formattable blob of data about the target graph.
 
-  Intended for exporting project information for IDE, such as the IntelliJ Pants plugin.
+  Subclasses can invoke the generate_targets_map method to get a dictionary of plain datastructures
+  (dicts, lists, strings) that can be easily read and exported to various formats.
   """
 
   # FORMAT_VERSION_NUMBER: Version number for identifying the export file format output. This
@@ -54,7 +58,7 @@ class Export(PythonTask, ConsoleTask):
 
   @classmethod
   def subsystem_dependencies(cls):
-    return super(Export, cls).subsystem_dependencies() + (DistributionLocator, JvmPlatform)
+    return super(ExportTask, cls).subsystem_dependencies() + (DistributionLocator, JvmPlatform)
 
   class SourceRootTypes(object):
     """Defines SourceRoot Types Constants"""
@@ -90,9 +94,7 @@ class Export(PythonTask, ConsoleTask):
 
   @classmethod
   def register_options(cls, register):
-    super(Export, cls).register_options(register)
-    register('--formatted', default=True, action='store_false',
-             help='Causes output to be a single line of JSON.')
+    super(ExportTask, cls).register_options(register)
     register('--libraries', default=True, action='store_true',
              help='Causes libraries to be output.')
     register('--libraries-sources', default=False, action='store_true',
@@ -104,33 +106,59 @@ class Export(PythonTask, ConsoleTask):
 
   @classmethod
   def prepare(cls, options, round_manager):
-    super(Export, cls).prepare(options, round_manager)
+    super(ExportTask, cls).prepare(options, round_manager)
     if options.libraries or options.libraries_sources or options.libraries_javadocs:
-      # TODO(John Sirois): Clean this up by using IvyUtils in here, passing it the confs we need
-      # as a parameter.
-      # See: https://github.com/pantsbuild/pants/issues/2177
-      round_manager.require_data('compile_classpath')
+      round_manager.require_data('java')
+      round_manager.require_data('scala')
 
-      # NB: These are fake products that only serve as signals to the upstream producer of
-      # 'compile_classpath' to resolve extra classifiers (ivy confs).  A hack that can go away with
-      # execution of the TODO above.
-      round_manager.require('jar_map_default')
-      if options.libraries_sources:
-        round_manager.require('jar_map_sources')
-      if options.libraries_javadocs:
-        round_manager.require('jar_map_javadoc')
+  def resolve_jars(self, targets):
+    executor = SubprocessExecutor(DistributionLocator.cached())
+    confs = []
+    if self.get_options().libraries:
+      confs.append('default')
+    if self.get_options().libraries_sources:
+      confs.append('sources')
+    if self.get_options().libraries_javadocs:
+      confs.append('javadoc')
 
-  def __init__(self, *args, **kwargs):
-    super(Export, self).__init__(*args, **kwargs)
-    self.format = self.get_options().formatted
+    # TODO(gmalmquist): This is a terrible hack for backwards-compatibility with the pants-plugin.
+    # Kill it ASAP, and update test_export_integration#test_export_jar_path_with_excludes_soft to
+    # use the flag actually scoped for this task.
+    export_options = self.get_options()
+    ivy_options = self.context.options.for_scope('resolve.ivy')
+    for name in set.intersection(set(export_options), set(ivy_options)):
+      if not ivy_options.is_default(name):
+        setattr(export_options, name, ivy_options[name])
+    confs = confs or export_options.confs
 
-  def console_output(self, targets):
+    compile_classpath = None
+    if confs:
+      compile_classpath = ClasspathProducts()
+      self.resolve(executor=executor,
+                   targets=targets,
+                   classpath_products=compile_classpath,
+                   confs=confs,
+                   extra_args=())
+    return compile_classpath
+
+  def generate_targets_map(self, targets, classpath_products=None):
+    """Generates a dictionary containing all pertinent information about the target graph.
+
+    The return dictionary is suitable for serialization by json.dumps.
+    :param targets: The list of targets to generate the map for.
+    :param classpath_products: Optional classpath_products. If not provided when the --libraries
+      option is `True`, this task will perform its own jar resolution.
+    """
     targets_map = {}
     resource_target_map = {}
-    classpath_products = (self.context.products.get_data('compile_classpath')
-                          if self.get_options().libraries else None)
-
     python_interpreter_targets_mapping = defaultdict(list)
+
+    if self.get_options().libraries:
+      # NB(gmalmquist): This supports mocking the classpath_products in tests.
+      if classpath_products is None:
+        classpath_products = self.resolve_jars(targets)
+    else:
+      classpath_products = None
 
     def process_target(current_target):
       """
@@ -138,16 +166,16 @@ class Export(PythonTask, ConsoleTask):
       """
       def get_target_type(target):
         if target.is_test:
-          return Export.SourceRootTypes.TEST
+          return ExportTask.SourceRootTypes.TEST
         else:
           if (isinstance(target, Resources) and
               target in resource_target_map and
               resource_target_map[target].is_test):
-            return Export.SourceRootTypes.TEST_RESOURCE
+            return ExportTask.SourceRootTypes.TEST_RESOURCE
           elif isinstance(target, Resources):
-            return Export.SourceRootTypes.RESOURCE
+            return ExportTask.SourceRootTypes.RESOURCE
           else:
-            return Export.SourceRootTypes.SOURCE
+            return ExportTask.SourceRootTypes.SOURCE
 
       info = {
         'targets': [],
@@ -268,10 +296,7 @@ class Export(PythonTask, ConsoleTask):
         'interpreters': interpreters_info
       }
 
-    if self.format:
-      return json.dumps(graph_info, indent=4, separators=(',', ': ')).splitlines()
-    else:
-      return [json.dumps(graph_info)]
+    return graph_info
 
   def _resolve_jars_info(self, targets, classpath_products):
     """Consults ivy_jar_products to export the external libraries.
@@ -317,3 +342,26 @@ class Export(PythonTask, ConsoleTask):
       source = os.path.dirname(source_file)
       return os.path.join(get_buildroot(), target.target_base, source), source.replace(os.sep, '.')
     return set(map(root_package_prefix, target.sources_relative_to_source_root()))
+
+
+class Export(ExportTask, ConsoleTask):
+  """Generates a JSON description of the targets as configured in pants.
+
+  Intended for exporting project information for IDE, such as the IntelliJ Pants plugin.
+  """
+
+  @classmethod
+  def register_options(cls, register):
+    super(Export, cls).register_options(register)
+    register('--formatted', default=True, action='store_false',
+             help='Causes output to be a single line of JSON.')
+
+  def __init__(self, *args, **kwargs):
+    super(ExportTask, self).__init__(*args, **kwargs)
+
+  def console_output(self, targets, classpath_products=None):
+    graph_info = self.generate_targets_map(targets, classpath_products=classpath_products)
+    if self.get_options().formatted:
+      return json.dumps(graph_info, indent=4, separators=(',', ': ')).splitlines()
+    else:
+      return [json.dumps(graph_info)]

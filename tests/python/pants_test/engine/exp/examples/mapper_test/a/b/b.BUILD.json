@@ -1,0 +1,12 @@
+{
+  "type_alias": "target",
+  "name": "b",
+  "dependencies": ["//d:e"],
+  "configurations": [
+    "//a",
+    {
+      "type_alias": "configuration",
+      "embedded": "yes"
+    }
+  ]
+}
