@@ -2,28 +2,27 @@
 
 ## Summary
 
-Haskell's build tools operate at three layers of granularity:
+There are three different levels of code organization and distribution in
+Haskell:
 
-* The `ghc` compiler builds object code from Haskell source files
-* The `cabal` tool builds a Haskell package from a collection of Haskell source
-  files and a package definition
-* The `stack` tool manages a Haskell project from a collection of Haskell
-  packages
+* **Source files** - Managed by the `ghc` compiler
+  files
+* **Packages** - A set of source files, managed by the `cabal` tool
+* **Projects** - A set of packages, managed by the `stack` tool
 
-This Haskell plugin provides a `pants` interface to the `stack` layer and may
-eventually provide an interface to the `cabal` layer as well.  The `ghc`
-compiler layer is indirectly managed by both `cabal` and `stack`.
+This Haskell plugin provides a `pants` interface to the **project** layer.
 
-Read the Background section if you are new to Haskell.  The Background section
-gives an overview of the Haskell build tooling.
+This plugin may eventually provide an interface to the **package** layer, but
+does not yet do so.
+
+The **source file** layer is indirectly managed by the project and package
+layers.
+
+If you are new to Haskell, read the Background section, which gives an overview
+of the Haskell build tooling.
 
 The Implementation section explains how this plugin wraps the Haskell build
 tools in more detail.
-
-## Terminology
-
-* Package: A collection of source files
-* Project: A collection of packages
 
 ## Background
 
@@ -66,17 +65,16 @@ $ ./HelloWorld
 Hello, world!
 ```
 
-By default, GHC executables are *mostly* statically linked, meaning that all
-the Haskell code is statically linked, but some libraries that the Haskell
-runtime requires are not (specifically `libc`, `libpthread`, and `libgmp`).  You
-can optionally fully statically link an executable (i.e. like in Go), or
-dynamically link Haskell libraries, but neither of those are the default
-behavior.
+By default, GHC executables are native binaries that are *mostly* statically
+linked, meaning that all the Haskell code is statically linked, but some
+libraries that the Haskell runtime requires are not (specifically `libc`,
+`libpthread`, and `libgmp`).  You can optionally fully statically link an
+executable (i.e. like in Go), or dynamically link Haskell libraries, but neither
+of those are the default behavior.
 
 `ghc` is a low-level tool that is only used for small, ad-hoc projects because
 `ghc` does not do any formal dependency management.  For larger projects you
-will typically use the `stack` tool (See the Stack section below for more
-details).
+will typically use the `stack` tool (Keep reading to learn more about `stack`).
 
 Haskell code is also not distributed at the granularity of individual source
 files or object code.  Instead, Haskell uses a package system like other
@@ -84,8 +82,8 @@ languages, which is the subject of the next section.
 
 ### Package creation
 
-For all practical purposes packages are the atomic unit of distribution in
-Haskell.  A minimal Haskell package is:
+Packages are the atomic unit of code distribution in Haskell.  A minimal Haskell
+package is:
 
 * a collection of source files
 * a `*.cabal` file containing package meta-data
@@ -152,9 +150,8 @@ others in increasing order of diligence:
 The more diligent you are the more easily others can depend on your package.
 
 If you choose to only provide source distributions (perhaps hosted on Github)
-then users can only depend on your package at the project level (See the
-Projects section for more details).  At the package level you can only depend
-on something that has been uploaded to Hackage.
+then users can only depend on your package at the project level.  At the package
+level you can only depend on something that has been uploaded to Hackage.
 
 Here is an example of such a Github-only source package named `pipes-tar`:
 
@@ -170,9 +167,6 @@ You can see an example package named `attoparsec` hosted on Hackage here:
 
 [https://hackage.haskell.org/package/attoparsec](https://hackage.haskell.org/package/attoparsec)
 
-The landing page for the above `attoparsec` package links to every version of
-the package ever uploaded and defaults to the most recent version.
-
 Stackage on the other hand is not a package repository; it's actually a
 "version set repository".  Stackage keeps track of package versions that build
 correctly together using a giant automated "mono-build" (i.e. one giant Haskell
@@ -181,22 +175,20 @@ If a maintainer adds their package to Stackage then they are on the hook to
 update their own package to continue building correctly within this mono-build.
 Periodically the latest package versions that build together successfully are
 frozen and released as version set snapshots known as "resolvers".  Stackage
-provides both nightly snapshots named `"nightly-YYYY-MM-DD"` or long-term
-support snapshots named `"lts-X.Y"`.
+provides both nightly snapshots named `"nightly-YYYY-MM-DD"` or less
+frequent long-term snapshots named `"lts-X.Y"`.
 
 You can see what an example Stackage snapshot looks like here:
 
 [https://www.stackage.org/lts-3.1/cabal.config](https://www.stackage.org/lts-3.1/cabal.config)
-
-The above "resolver" is the long-term support snapshot version 3.1, and the
-resolver is just a list of package version constraints.
 
 ### Package consumption
 
 Every Haskell package must specify the names of direct dependencies.  To be
 precise, if your source code imports some module named `Foo.Bar` then you must
 depend on the package that exports `Foo.Bar` within your `*.cabal` file.  You do
-not need to specify transitive dependencies that you don't directly import.
+not need to specify transitive dependencies if you don't directly import the
+modules they provide.
 
 For each dependency you can specify either:
 
@@ -245,8 +237,8 @@ The meaning of the fields are:
 * `packages`: All source dependencies for this project
 
 Our example package had only one dependency (i.e. `containers`) and that
-dependency is already constrained by Stackage, so we didn't need to specify any
-other information within our `stack.yaml` file.
+dependency is already constrained by the `lts-3.1` resolver, so we didn't need
+to specify any other information within our `stack.yaml` file.
 
 `stack` was designed to be backwards compatible with the prevous `cabal-install`
 build tool and workflow.  This means that there is some duplication of
@@ -260,10 +252,10 @@ bounds from the `build-depends` section of your `*.cabal` file.
 
 Stackage encompasses a very wide swath of the most heavily used packages in the
 Haskell ecosystem, so usually the `resolver` field suffices to lock in the
-versions of all packages in your project's dependency graph.  For example, 96
-of the top 100 packages and 752 of the top 1000 packages (by download) are on
-Stackage.  You can find the set of packages constrained by a resolver by
-visiting:
+versions of all packages in your project's dependency graph.  For example, at
+the time of this writing 96 of the top 100 packages and 752 of the top 1000
+packages (by download) are on Stackage.  You can find the set of packages
+constrained by a resolver by visiting:
 
 ```
 https://www.stackage.org/:resolver/cabal.config
@@ -282,7 +274,7 @@ top-level package.
 You can also have a "headless" `stack`-managed project with no source
 dependencies at all (i.e. the `packages` field is empty), and that's actually a
 useful thing to do!  In fact, this Haskell plugin takes advantage of this
-feature (See the Implementation section for more details).
+feature to do things like opening up a REPL for 3rdparty package.
 
 Here's an example of a more complicated `stack.yaml` file:
 
@@ -303,25 +295,7 @@ packages).  Additionally, this project has two source dependencies:
 * A remote source tarball for the `pipes-network` package
 
 The combination of the `resolver`, `extra-deps`, and `packages` fields ensure
-that every `stack`-maintained project produces a reproducible build.
-
-For the remainder of this document I will focus entirely on `stack` for
-project management and ignore `cabal-install`.  I believe that `stack is a
-significant improvement over `cabal-install` because:
-
-* `stack` guarantees reproducible builds
-* `stack` eliminates build failures for all packages on Stackage
-* `stack` substantially reduces build failures even for packages off of Stackage
-* `stack` treats the compiler as a dependency and isolates the compiler if it
-   conflicts with any preinstalled compiler
-* `stack` has a much better user experience (in my subjective opinion)
-* `stack` requires substantially smaller package caches (See the next section)
-
-... and commercial adoption is heavily biased in favor of `stack` for the above
-reasons.
-
-I'm only saying this so that I don't have to explain everything for both
-the `stack` and `cabal-install` project managers.
+that every `stack`-maintained project gives a reproducible build.
 
 ### Package caches
 
@@ -341,9 +315,6 @@ multiple `stack`-managed projects share the same the same "resolver" then
 they will make excellent use of the cache because they will all use the same
 version of every package that Stackage tracks.
 
-I'm oversimplifying a bit how the cache works, but that's pretty close to the
-truth.
-
 ## Implementation
 
 ### Targets
@@ -357,14 +328,15 @@ For example, when I compile/test/benchmark something am I operating on:
 * a Haskell package?
 * a Haskell project?
 
-For the following pants goals the Haskell tooling only provides support at the
-package or project level:
+For the following pants goals the Haskell tool chain only provides support at
+the package or project level:
 
 * `test`
 * `bench`
 * `doc`
 
-For these goals you can provide a reasonably interpretation at all three levels:
+For the remaining goals you can provide a reasonable behavior at all three
+levels (including the source file level):
 
 * `compile`
 * `binary`
@@ -373,26 +345,27 @@ For these goals you can provide a reasonably interpretation at all three levels:
 
 So you could imagine that we could either have:
 
-* source-file-level targets,
-* package-level targets, or:
-* project-level targets.
+* source-file-level `pants` targets,
+* package-level `pants` targets, or:
+* project-level `pants` targets.
 
-A "source-file-level" target would map onto `ghc` compiler flags.  A
-"package-level" target would map onto a `*.cabal` file.  A "project-level"
-target would map onto a `stack.yaml` file.
+A "source-file-level" target would translate into `ghc` compiler flags used to
+build that file.  A "package-level" target would map onto an auto-generated
+`*.cabal` file.  A "project-level" target would map onto an auto-generated
+`stack.yaml` file.
 
-The first draft of this plugin treates targets as **projects**, meaning that
-these targets will map onto `stack.yaml` files.  The main reason for this is
-that there are a few important features that the existing Haskell build tooling
-only provides at the project level:
+The first draft of this plugin only provides targets for **projects**, meaning
+that these targets will translate into `stack.yaml` files.  The main reason for
+this is that there are a few important features that the existing Haskell build
+tooling only provides at the project level:
 
 * Dependencies on source packages
 * Compiler toolchain bootstrapping and isolation
-* `ghc-pkg` database isolation (really technical topic, not discussed)
+* `ghc-pkg` package database isolation (really technical topic, not discussed)
 
 These features could be implemented at the package level or source file level,
 but they would have to either (A) be reimplemented within `pants` or more likely
-(B) simulated by wrapping them in transient projects.  I chose to use
+(B) simulated by wrapping them in a disposable projects.  I chose to use
 project-level targets to get something viable off the ground with as little code
 as possible and reusing as much existing Haskell tooling and development idioms
 as possible.
@@ -408,7 +381,7 @@ All three of these targets contain:
 
 * a target `name`
 * the package `name`
-* a Stackage `resolver` (see Resolver section below for more discussion)
+* a Stackage `resolver` (see the Resolvers section below for more discussion)
 * an optional `dependencies` field
 
 For the `stackage` target, that's the only information you need since the
@@ -421,8 +394,8 @@ can be a local directory or a remote tarball.
 
 `stackage` targets are not necessary as dependencies since they are already
 implicitly specified by the resolver field.  The only reason to have a
-`stackage` target is if you want to directly `bench`/`test`/`repl` a package
-tracked by Stackage.
+`stackage` target is if you want to directly `bench`/`test`/`repl` a 3rdparty
+package.
 
 The next logical progression for this plugin would be to add support for
 package-level targets so that you could replace `*.cabal` files with `pants`
@@ -431,14 +404,15 @@ package-level targets so that you could replace `*.cabal` files with `pants`
 ### Paths and working directories
 
 This plugin configures the `stack` BUILD tool to use temporary directories
-managed by `pants`, with one major exception: the cache directory.  `stack`
-currently does not let you configure the cache directory in another location.
-If this is an issue I can open up an issue against the `stack` tool to add
-support for configuring the location of the package cache.
+managed by `pants`, with one major exception: the cache directory, which is
+located under the user's home directory.  `stack` currently does not let you
+configure the cache directory in another location.  If this is an issue I can
+open up an issue against the `stack` tool to add support for configuring the
+location of the package cache.
 
 `stack` also stores a package-local cache for every source package.  This is how
 `stack` implements incremental builds for projects spanning multiple source
-packages.  As far as I know the location of these directories is also not
+packages.  As far as I know the location of these cache directories is also not
 configurable and I can similarly open an issue about this if necessary.
 
 ### Resolvers
@@ -449,22 +423,24 @@ There are two ways you could implement resolvers:
   graph share the same `resolver`
 * The resolver is specified for the repository as a whole (i.e. in `pants.ini`)
 
-The current implementation does the former, but I'm seriously considering the
-latter since it would simplify all the targets and it would maximize the
-effectiveness of the package cache.
+The current implementation uses the former approach.  I made an attempt to use
+the latter approach, but then discovered that repository-level flags are just
+special cases of optional flags, but it doesn't make sense to make the resolver
+optional and `pants` forbids required flags.
 
 ### Bootstrapping `stack`
 
 The plugin currently does not bootstrap `stack` yet and instead uses whatever
-`stack` it finds on the current `PATH` (if any).  There is no good reason for
-this, I just haven't implemented this feature yet.
+`stack` it finds on the current `PATH` (if any).  There is no technical reason
+for the absence of bootstrapping, I just haven't implemented this feature yet.
 
 ### Goals
 
-The `pants` goals map very cleaningly onto `stack` goals.  `stack` is
-basically the Haskell version of `pants` and provides many of the same goals
-and features (i.e. caching, source dependencies, and toolchain bootstrapping),
-which is why the mapping is very straightforward.
+The `pants` goals translate cleanly onto `stack` goals.  To a first
+approximation, `stack` is basically the Haskell version of `pants` and provides
+many of the same goals and features (i.e. caching, source dependencies, and
+toolchain bootstrapping), which is why the translation between `stack` and
+`pants` is straightforward.
 
 If you're familiar with `pants` then you can easily pick up `stack` by just
 performing the following translations:
@@ -478,7 +454,3 @@ performing the following translations:
 ./pants test     ->  stack test
 ./pants bench    ->  stack bench
 ```
-
-# TODO:
-
-* Make the resolver repo-wide
