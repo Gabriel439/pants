@@ -24,6 +24,9 @@ of the Haskell build tooling.
 The Implementation section explains how this plugin wraps the Haskell build
 tools in more detail.
 
+The Example Usage section walks through what the end user experience would be
+like
+
 ## Background
 
 ### `ghc`
@@ -454,3 +457,235 @@ performing the following translations:
 ./pants test     ->  stack test
 ./pants bench    ->  stack bench
 ```
+
+## Example Usage
+
+Here are a few example workflows in order of increasing complexity to walk
+through what will happen when users run various commands.
+
+### Stackage packages
+
+Let's say that I want to benchmark the `pipes` package on Stackage.  I would
+create the following `BUILD` file:
+
+```python
+stackage(
+  name='pipes',
+  package='pipes',
+  resolver='lts-3.1',
+)
+```
+
+... then run:
+
+```shell
+$ ./pants bench path/to/build/file:pipes
+```
+
+That will then:
+
+* Check to see what `ghc` compiler version is associated with the `lts-3.1`
+  resolver (7.10.1 in this case)
+* Check to see if the `ghc-7.10.1` compiler toolchain is already installed
+* If not installed, then bootstrap and isolate the `ghc-7.10.1` compiler
+  toolchain somewhere underneath the `~/.stack` directory
+* Learn that version of `pipes` is fixed to `4.1.6` for the `lts-3.1` resolver
+* Look up the metadata for the `pipes-4.1.6` package on Hackage to discover its
+  immediate dependencies and fix their versions using the resolver
+* Continue to transitively fill out the entire dependency graph for `pipes`
+* Install all packages in the dependency graph of `pipes` (in parallel when
+  possible)
+* Cache the built packages somewhere underneath the `~/.stack` directory
+* Run the benchmark suite for `pipes`
+
+Note that `pipes` depends on other packages but we do not need to specify them
+as `BUILD` target dependencies of our `pipes` target because the resolver
+already fixes those dependencies.  The dependencies of every Stackage package
+are also guaranteed to be on Stackage.
+
+### Hackage packages
+
+Let's say that I want to load the `discrimination` library into a Haskell REPL
+using the `lts-3.1` resolver.  This resolver is missing the `discrimination`
+package and one of its dependencies (`promises`) so we can't build this package
+unless we fix the version of both the `promises` and `discrimination` packages.
+
+We will fix the `promises` package to version `0.2` and the `discrimination`
+package to version `0.1` by creating the following two BUILD targets:
+
+```python
+hackage(
+  name='promises',
+  package='promises',
+  resolver='lts-3.1',
+  version='0.2',
+)
+
+hackage(
+  name='discrimination',
+  package='discrimination',
+  resolver='lts-3.1',
+  version='0.1',
+  dependencies=[
+    ':promises'
+  ]
+)
+```
+
+Then we would load the `discrimination` library into the REPL using:
+
+```shell
+$ ./pants repl path/to/build/file:discrimination
+```
+
+That will follow the exact same set of steps as in the previous example, but
+would instead load the library into the REPL.
+
+If I were to rerun this command it would reuse the cached library from the
+previous run and start up much more quickly.
+
+### Remote source packages
+
+Let's say that I want to run an executable produced by a source project that I
+find on Github such as the `stack` tool itself.  The package for the `stack`
+executable is actually already on Stackage, but it's hard to find a good example
+that isn't already on Stackage so this is a little bit contrived.
+
+The `stack` project has a source distribution tarball located here:
+
+[https://github.com/commercialhaskell/stack/archive/v0.1.3.1.tar.gz](https://github.com/commercialhaskell/stack/archive/v0.1.3.1.tar.gz)
+
+... so I would just create the following BUILD file:
+
+```python
+cabal(
+  name='stack',
+  package='stack',
+  resolver='lts-3.1',
+  path='https://github.com/commercialhaskell/stack/archive/v0.1.3.1.tar.gz',
+)
+```
+
+... and then I could run the `stack` executable built from that tarball using:
+
+```
+./pants run path/to/build/file:stack --run-stack-run-executable=stack
+```
+
+We have to specify the executable we wish to run on the command line because a
+Haskell package can produce multiple executables.
+
+That would perform the following sequence of steps:
+that it would also:
+
+* download the remote source project to a temporary directory
+* resolve and compile dependencies the same way as previous examples
+* build the executable
+* copy the executable underneath `~/.stack`
+* delete the temporary directory without caching any work
+* run the executable
+
+Note that the work performed for the remote source package is never cached by
+`stack`.  If you want to cache the work then you need to create a local copy of
+the source package and then `stack` will cache any work in a hidden
+`.stack-work` directory underneath that package.
+
+Note that in the above example `stack` would actually recompile the package
+**3 times**.  The reason why is that the `./pants run` command translates into
+the three sequential `compile`/`binary`/`run` goals, which in turn translate
+into the `stack build`/`stack install`/`stack run` commands.  Really only the
+last `stack` command needs to be run (like `pants`, the first two `stack` goals
+are implied by the third), but that means that you would download and rebuild
+the remote package three times instead of just once (because remote packages are
+not cached).  That's why I picked this example since it highlights a
+pathological corner case in the current plugin behavior.
+
+### Local source project
+
+A much faster approach would be to keep a local copy of the source instead of
+pointing to a remote tarball.  Then I would add the following `BUILD` file
+within the root of the `stack` local source package:
+
+```python
+cabal(
+  name='stack',
+  package='stack',
+  resolver='lts-3.1',
+  path='.',
+)
+```
+
+... and then run the executable using:
+
+```shell
+$ ./pants run path/to/stack/project:stack
+```
+
+Now this would cache everything and subsequent `run` commands would go much
+more quickly.  To be specific, this would:
+
+* resolve dependencies the same as previous examples
+* check if the package has been previously cached locally within a `.stack-work`
+  directory
+* build the project if there is nothing in the cache
+* run all tests
+
+### New local project
+
+Let's say that I want to author a new local source package.  I would need to
+create the `*.cabal` for my project myself (the Haskell plugin does not yet
+generate this file for you), but then I could add the following `BUILD` file to
+my project.
+
+```python
+cabal(
+  name     = 'mypackage',
+  package  = 'mypackage',
+  resolver = 'lts-3.1',
+)
+```
+
+Then I could test my project using:
+
+```shell
+$ ./pants test path/to/build/file:mypackage
+```
+
+This would then perform the same steps as the previous source package example.
+
+#### Project sharing
+
+Another person within a larger repository might author their own local source
+package that depends on my local source package.  To do this, they would do
+two things:
+
+* Add the name of my package to the `build-depends` field of their `*.cabal`
+  file (this Haskell plugin does not currently do this for you)
+* Create the following `BUILD` target inside their package directory:
+
+```python
+cabal(
+  name     = 'theirpackage',
+  package  = 'theirpackage',
+  resolver = 'lts-3.1',
+  dependencies = [
+    'path/to/my/build/file:mypackage',
+  ]
+)
+```
+
+Then when they build their package, the tool would: 
+
+* resolve all non-source dependencies in the exact same way as before
+* check the `~/.stack-work` directory underneath my package to see if my work
+  was cached and still valid
+* build my package if there is no valid cached build product for my package
+* invalidate their package cache if my package changed
+* build their package if there is no valid cached build product for their
+  package
+
+As you add more source packages with dependencies between each other the `stack`
+tool creates an incremental build tree that stores all necessary information
+underneath each source package as a `~/.stack-work` directory.  Whenever any
+local source package changes only the reverse dependencies of that package need
+to be rebuilt.
