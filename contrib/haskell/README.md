@@ -1,5 +1,7 @@
 # Haskell plugin
 
+## Table of contents
+
 ## Summary
 
 There are three different levels of code organization and distribution in
@@ -26,6 +28,25 @@ tools in more detail.
 
 The Example Usage section walks through what the end user experience would be
 like
+
+* [Background](#background)
+  * [`ghc`](#ghc)
+  * [Package creation](#package-creation)
+  * [Package consumption](#package-consumption)
+  * [Package caches](#package-caches)
+* [Implementation](#implementation)
+  * [Targets](#targets)
+  * [Paths and working directories](#paths-and-working-directories)
+  * [Resolvers](#resolvers)
+  * [Bootstrapping `stack`](#bootstrapping-stack)
+  * [Goals](#goals)
+* [Example Usage](#example-usage)
+  * [Stackage packages](#stackage-packages)
+  * [Hackage packages](#hackage-packages)
+  * [Remote source packages](#remote-source-packages)
+  * [Local source project](#local-source-project)
+  * [New local project](#new-local-project)
+  * [Project sharing](#project-sharing)
 
 ## Background
 
